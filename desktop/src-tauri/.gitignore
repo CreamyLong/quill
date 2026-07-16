@@ -1,0 +1,8 @@
+# Rust build artifacts
+target/
+
+# Cargo lock is typically committed for binaries, but ignored for libraries.
+# This is a Tauri app (binary), so Cargo.lock should remain tracked.
+
+# macOS
+.DS_Store

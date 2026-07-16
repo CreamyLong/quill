@@ -1,0 +1,20 @@
+{
+  "name": "quill-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Quill desktop shell — Tauri 2 (Rust + WebView)",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

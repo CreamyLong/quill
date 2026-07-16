@@ -1,0 +1,95 @@
+---
+title: SciTops Documentation
+description: Understand SciTops, build with the Harness, and deploy the App.
+---
+
+# SciTops Documentation
+
+SciTops is a framework for building and operating agent systems. It gives you a runtime harness for composing agents with memory, tools, skills, sandboxes, and subagents, and it also provides an application layer that turns those capabilities into a usable product experience.
+
+This documentation is organized around those two parts:
+
+- **SciTops Harness**: the core SDK and runtime layer for building your own agent system.
+- **SciTops App**: a reference application built on top of the Harness for deployment, operations, and end-user workflows.
+
+If you want to understand how SciTops works, start with the Introduction. If you want to build on the core runtime, go to the Harness docs. If you want to deploy and use SciTops as an application, go to the App docs.
+
+## Start here
+
+### If you are new to SciTops
+
+Start with the conceptual overview first.
+
+- [Introduction](./docs/introduction)
+- [Why SciTops](./docs/introduction/why-scitops)
+- [Harness vs App](./docs/introduction/harness-vs-app)
+
+### If you want to build with SciTops
+
+Start with the Harness section. This path is for teams who want to integrate SciTops capabilities into their own system or build a custom agent product on top of the SciTops runtime.
+
+- [SciTops Harness](./docs/harness)
+- [Quick Start](./docs/harness/quick-start)
+- [Configuration](./docs/harness/configuration)
+- [Customization](./docs/harness/customization)
+
+### If you want to deploy and use SciTops
+
+Start with the App section. This path is for teams who want to run SciTops as a complete application and understand how to configure, operate, and use it in practice.
+
+- [SciTops App](./docs/application)
+- [Quick Start](./docs/app/quick-start)
+- [Deployment Guide](./docs/app/deployment-guide)
+- [Workspace Usage](./docs/app/workspace-usage)
+
+## Documentation structure
+
+### Introduction
+
+The Introduction section helps you build the right mental model before you look at implementation details.
+
+- **What is SciTops** explains what SciTops is and what problems it is designed to solve.
+- **Why SciTops** explains the motivation behind the project.
+- **Core Concepts** introduces the concepts that appear across the documentation.
+- **Harness vs App** explains the relationship between the runtime layer and the application layer.
+
+### SciTops Harness
+
+The Harness section is the core of the technical documentation. It is written for developers who want to build their own SciTops-based system.
+
+- **Quick Start** shows how to create your first harness with the core SciTops API.
+- **Design Principles** explains the architectural ideas behind the Harness.
+- **Configuration** covers the main configuration surface of the SDK/runtime.
+- **Memory**, **Tools**, **Skills**, and **Sandbox** explain the major system capabilities separately.
+- **Customization** shows how to adapt SciTops to your own product requirements.
+- **Integration Guide** explains how to integrate the Harness into a larger system.
+
+### SciTops App
+
+The App section is written for teams who want to deploy SciTops as a usable product.
+
+- **Quick Start** helps you run the application locally.
+- **Deployment Guide** explains how to deploy SciTops in your own environment.
+- **Configuration** covers the application-level configuration model.
+- **Workspace Usage** explains the main user workflows.
+- **Agents and Threads** explains how users interact with SciTops in practice.
+- **Operations and Troubleshooting** covers maintenance and production usage.
+
+### Tutorials
+
+The Tutorials section is for hands-on, task-oriented learning.
+
+- [Tutorials](./docs/tutorials)
+
+### Reference
+
+The Reference section is for detailed lookup material, including configuration, runtime modes, APIs, and source-oriented mapping.
+
+- [Reference](./docs/reference)
+
+## Choose the right path
+
+- If you are **evaluating the project**, start with [Introduction](./docs/introduction).
+- If you are **building your own agent system**, start with [SciTops Harness](./docs/harness).
+- If you are **deploying SciTops for users**, start with [SciTops App](./docs/application).
+- If you want to **learn by doing**, go to [Tutorials](./docs/tutorials).

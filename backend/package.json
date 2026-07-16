@@ -1,0 +1,46 @@
+{
+  "name": "quill-backend",
+  "version": "2.1.0",
+  "description": "TypeScript backend for quill",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch --preserveWatchOutput",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "agent:smoke": "node --experimental-vm-modules scripts/agent_smoke_test.mjs",
+    "agent:cli": "node --experimental-vm-modules scripts/agent_cli.mjs",
+    "agent:test": "node --experimental-vm-modules scripts/agent_runtime_test.mjs",
+    "agent:server": "node --experimental-vm-modules scripts/agent_server.mjs",
+    "gateway": "node --experimental-vm-modules scripts/gateway_server.mjs",
+    "gateway:dev": "npm run build && QUILL_PORT=${QUILL_PORT:-8001} node --experimental-vm-modules scripts/gateway_server.mjs",
+    "gateway:test": "node --experimental-vm-modules scripts/gateway_test.mjs",
+    "config:test": "node --experimental-vm-modules scripts/config_loader_test.mjs"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/jszip": "^3.4.0",
+    "@types/node": "^22.20.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@langchain/anthropic": "^1.5.1",
+    "@langchain/core": "^1.2.1",
+    "@langchain/langgraph": "^1.4.7",
+    "@langchain/langgraph-sdk": "^1.9.25",
+    "@langchain/mcp-adapters": "^1.1.3",
+    "@langchain/openai": "^1.5.3",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/busboy": "^1.5.4",
+    "bcrypt": "^6.0.0",
+    "busboy": "^1.6.0",
+    "jszip": "^3.10.1",
+    "officeparser": "^7.2.3",
+    "pptxgenjs": "^4.0.1",
+    "sync-request": "^6.1.0",
+    "vitest": "^4.1.10",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  }
+}

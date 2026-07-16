@@ -1,0 +1,72 @@
+name: Lint Check
+
+on:
+  push:
+    branches: [ 'main', '2.0.x-dev' ]
+  pull_request:
+    branches: [ '*' ]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Lint + type-check backend
+        working-directory: backend
+        run: npm run check
+
+  lint-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Use pinned pnpm version
+        run: corepack prepare pnpm@10.26.2 --activate
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Check frontend formatting
+        run: |
+          cd frontend
+          pnpm format
+
+      - name: Run frontend linting
+        run: |
+          cd frontend
+          pnpm lint
+
+      - name: Check TypeScript types
+        run: |
+          cd frontend
+          pnpm typecheck
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          BETTER_AUTH_SECRET=local-dev-secret pnpm build
