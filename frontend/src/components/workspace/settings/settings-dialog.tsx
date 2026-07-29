@@ -2,6 +2,7 @@
 
 import {
   BellIcon,
+  GlobeIcon,
   InfoIcon,
   PaletteIcon,
   UserIcon,
@@ -18,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AboutSettingsPage } from "@/components/workspace/settings/about-settings-page";
 import { AccountSettingsPage } from "@/components/workspace/settings/account-settings-page";
 import { AppearanceSettingsPage } from "@/components/workspace/settings/appearance-settings-page";
+import { CommunityToolsSettingsPage } from "@/components/workspace/settings/community-tools-settings-page";
 import { NotificationSettingsPage } from "@/components/workspace/settings/notification-settings-page";
 import { useI18n } from "@/core/i18n/hooks";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,7 @@ import { cn } from "@/lib/utils";
 type SettingsSection =
   | "account"
   | "appearance"
+  | "communityTools"
   | "notification"
   | "about";
 
@@ -57,6 +60,11 @@ export function SettingsDialog(props: SettingsDialogProps) {
         icon: PaletteIcon,
       },
       {
+        id: "communityTools",
+        label: t.settings.sections.communityTools,
+        icon: GlobeIcon,
+      },
+      {
         id: "notification",
         label: t.settings.sections.notification,
         icon: BellIcon,
@@ -70,6 +78,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
     [
       t.settings.sections.account,
       t.settings.sections.appearance,
+      t.settings.sections.communityTools,
       t.settings.sections.notification,
       t.settings.sections.about,
     ],
@@ -118,6 +127,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
             <div className="space-y-8 p-6">
               {activeSection === "account" && <AccountSettingsPage />}
               {activeSection === "appearance" && <AppearanceSettingsPage />}
+              {activeSection === "communityTools" && <CommunityToolsSettingsPage />}
               {activeSection === "notification" && <NotificationSettingsPage />}
               {activeSection === "about" && <AboutSettingsPage />}
             </div>

@@ -367,6 +367,7 @@ export interface Translations {
       memory: string;
       tools: string;
       skills: string;
+      communityTools: string;
       notification: string;
       about: string;
     };
@@ -460,6 +461,15 @@ export interface Translations {
       description: string;
       adminRequired: string;
       empty: string;
+    };
+    communityTools: {
+      title: string;
+      description: string;
+      empty: string;
+      useLabel: string;
+      saveSuccess: string;
+      saveFailed: string;
+      restartNotice: string;
     };
     channels: {
       title: string;

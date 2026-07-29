@@ -482,6 +482,7 @@ export const enUS: Translations = {
       memory: "Memory",
       tools: "Tools",
       skills: "Skills",
+      communityTools: "Web Tools",
       notification: "Notification",
       about: "About",
     },
@@ -582,6 +583,15 @@ export const enUS: Translations = {
       description: "Manage the configuration and enabled status of MCP tools.",
       adminRequired: "Admin privileges are required to manage MCP tools.",
       empty: "No MCP tools configured.",
+    },
+    communityTools: {
+      title: "Community Tools",
+      description: "Configure web search and fetch providers. Set API keys and enable/disable providers.",
+      empty: "No community tools configured.",
+      useLabel: "Module",
+      saveSuccess: "Saved. Restart Gateway to take effect.",
+      saveFailed: "Failed to save community tools configuration.",
+      restartNotice: "Changes require a Gateway restart to take effect.",
     },
     channels: {
       title: "Channels",

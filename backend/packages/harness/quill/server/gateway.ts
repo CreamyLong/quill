@@ -62,6 +62,10 @@ import {
 import { getAppConfig } from "../config/app_config.js";
 import { getPaths } from "../config/paths.js";
 import { ExtensionsConfig } from "../config/extensions_config.js";
+import {
+  validateToolEntries,
+  writeConfigToolsAndReload,
+} from "../config/config_writer.js";
 
 import {
   RunEventStore,
@@ -91,6 +95,171 @@ export interface GatewayModel {
   supports_thinking?: boolean;
   supports_reasoning_effort?: boolean;
 }
+
+/** A configurable field in a community provider's config entry. */
+export interface CommunityToolProviderField {
+  key: string;
+  label: string;
+  type: "password" | "text" | "number";
+  required?: boolean;
+  placeholder?: string;
+}
+
+/** Static description of a community tool provider for the Settings UI. */
+export interface CommunityToolProvider {
+  id: string;
+  displayName: string;
+  use: string;
+  group: string;
+  fields: CommunityToolProviderField[];
+}
+
+/**
+ * Registry of all community tool providers. Synced with the
+ * `backend/packages/harness/quill/community/` directory.
+ */
+export const COMMUNITY_TOOL_PROVIDERS: CommunityToolProvider[] = [
+  {
+    id: "brave",
+    displayName: "Brave Search",
+    use: "quill.community.brave.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "ddg_search",
+    displayName: "DuckDuckGo",
+    use: "quill.community.ddg_search.tools:webSearchTool",
+    group: "web",
+    fields: [],
+  },
+  {
+    id: "exa",
+    displayName: "Exa",
+    use: "quill.community.exa.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "exa_fetch",
+    displayName: "Exa (Fetch)",
+    use: "quill.community.exa.tools:webFetchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "fastcrw",
+    displayName: "fastCRW",
+    use: "quill.community.fastcrw.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: false }],
+  },
+  {
+    id: "fastcrw_fetch",
+    displayName: "fastCRW (Fetch)",
+    use: "quill.community.fastcrw.tools:webFetchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: false }],
+  },
+  {
+    id: "firecrawl",
+    displayName: "Firecrawl",
+    use: "quill.community.firecrawl.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "firecrawl_fetch",
+    displayName: "Firecrawl (Fetch)",
+    use: "quill.community.firecrawl.tools:webFetchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "groundroute",
+    displayName: "GroundRoute",
+    use: "quill.community.groundroute.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "groundroute_fetch",
+    displayName: "GroundRoute (Fetch)",
+    use: "quill.community.groundroute.tools:webFetchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "image_search",
+    displayName: "DuckDuckGo Images",
+    use: "quill.community.image_search.tools:imageSearchTool",
+    group: "web",
+    fields: [],
+  },
+  {
+    id: "infoquest",
+    displayName: "InfoQuest",
+    use: "quill.community.infoquest.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "infoquest_fetch",
+    displayName: "InfoQuest (Fetch)",
+    use: "quill.community.infoquest.tools:webFetchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "jina_ai",
+    displayName: "Jina AI Reader",
+    use: "quill.community.jina_ai.tools:webFetchTool",
+    group: "web",
+    fields: [],
+  },
+  {
+    id: "searxng",
+    displayName: "SearXNG",
+    use: "quill.community.searxng.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "base_url", label: "Base URL", type: "text", placeholder: "http://localhost:8088" }],
+  },
+  {
+    id: "serper",
+    displayName: "Serper",
+    use: "quill.community.serper.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "tavily",
+    displayName: "Tavily",
+    use: "quill.community.tavily.tools:webSearchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "tavily_fetch",
+    displayName: "Tavily (Fetch)",
+    use: "quill.community.tavily.tools:webFetchTool",
+    group: "web",
+    fields: [{ key: "api_key", label: "API Key", type: "password", required: true }],
+  },
+  {
+    id: "zai_web_reader",
+    displayName: "ZAI Web Reader",
+    use: "quill.community.zai_web_reader.tools:webFetchZaiTool",
+    group: "web",
+    fields: [],
+  },
+  {
+    id: "zai_web_search",
+    displayName: "ZAI Web Search",
+    use: "quill.community.zai_web_search.tools:webSearchTool",
+    group: "web",
+    fields: [],
+  },
+];
 
 export interface AuthResult {
   user?: unknown;
@@ -838,6 +1007,36 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
           error: err instanceof Error ? err.message : String(err),
         });
       }
+      return;
+    }
+    // --- Community Tools config (read/write tools section of config.yaml) ---
+    if (p === "/config/tools" && method === "GET") {
+      sendJson(req, res, 200, { tools: getAppConfig().tools ?? [] });
+      return;
+    }
+    if (p === "/config/tools" && method === "PUT") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const tools = body.tools;
+      const { valid, errors } = validateToolEntries(tools);
+      if (!valid) {
+        sendJson(req, res, 400, { detail: "Invalid tools configuration", errors });
+        return;
+      }
+      try {
+        writeConfigToolsAndReload(tools as unknown[]);
+        sendJson(req, res, 200, {
+          tools,
+          message: "Saved. Restart Gateway to take effect.",
+        });
+      } catch (err) {
+        sendJson(req, res, 500, {
+          detail: err instanceof Error ? err.message : "Failed to save tools config",
+        });
+      }
+      return;
+    }
+    if (p === "/config/tools/providers" && method === "GET") {
+      sendJson(req, res, 200, { providers: COMMUNITY_TOOL_PROVIDERS });
       return;
     }
     if (p === "/channels/providers" && method === "GET") {

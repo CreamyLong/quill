@@ -464,6 +464,7 @@ export const zhCN: Translations = {
       memory: "记忆",
       tools: "工具",
       skills: "技能",
+      communityTools: "网络工具",
       notification: "通知",
       about: "关于",
     },
@@ -561,6 +562,15 @@ export const zhCN: Translations = {
       description: "管理 MCP 工具的配置和启用状态。",
       adminRequired: "需要管理员权限才能管理 MCP 工具。",
       empty: "暂无 MCP 工具。",
+    },
+    communityTools: {
+      title: "社区工具",
+      description: "配置网络搜索和网页提取服务。设置 API 密钥并启用/禁用服务。",
+      empty: "暂无社区工具配置。",
+      useLabel: "模块",
+      saveSuccess: "已保存。重启 Gateway 后生效。",
+      saveFailed: "保存社区工具配置失败。",
+      restartNotice: "修改需要重启 Gateway 才能生效。",
     },
     channels: {
       title: "渠道",
