@@ -18,6 +18,7 @@ import { coerceIso } from "../../../utils/time.js";
 import { AUTO, getCurrentUser, resolveUserId, type AutoSentinel } from "../../user_context.js";
 import {
   RunEventStore,
+  sanitizeLegacyCommandRepr,
   type ListEventsOptions,
   type ListMessagesOptions,
   type PutEventArgs,
@@ -101,7 +102,7 @@ export class DbRunEventStore extends RunEventStore {
       user_id: (row["user_id"] as string | null) ?? null,
       event_type: String(row["event_type"]),
       category: String(row["category"]),
-      content,
+      content: sanitizeLegacyCommandRepr(content),
       metadata,
       seq: Number(row["seq"]),
       // SQLite stores created_at as an ISO string; coerceIso normalizes it.

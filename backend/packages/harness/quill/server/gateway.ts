@@ -1282,12 +1282,26 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
 
     const history = p.match(/^\/threads\/([^/]+)\/history$/);
     if (history && method === "POST") {
-      const t = threads.get(decodeURIComponent(history[1]));
+      const threadId = decodeURIComponent(history[1]);
+      const t = threads.get(threadId);
       if (!t) {
         sendJson(req, res, 200, []);
         return;
       }
-      sendJson(req, res, 200, [stateView(t)]);
+      // Read messages from the event store (append-only log) instead of the
+      // checkpoint state alone. LangGraph's SummarizationMiddleware mutates
+      // the checkpoint message list in place, removing original human messages
+      // before the summary point. The event store preserves them all.
+      const view = stateView(t);
+      try {
+        const records = await eventStore.listMessages(threadId, { limit: 5000 });
+        if (records.length > 0) {
+          (view.values as Record<string, unknown>).messages = records.map((r) => r.content);
+        }
+      } catch (err) {
+        log(deps, `[gateway] event store read failed for /history ${threadId}: ${err instanceof Error ? err.message : err}`);
+      }
+      sendJson(req, res, 200, [view]);
       return;
     }
 

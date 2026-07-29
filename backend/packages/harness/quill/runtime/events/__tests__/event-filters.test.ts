@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { sanitizeLegacyCommandRepr } from "../store/base.ts";
 import { MemoryRunEventStore } from "../store/memory.ts";
 
 /** Insert one event through the public put() API. */
@@ -77,6 +78,49 @@ describe("RunEventStore.listEvents filters", () => {
     expect(p3).toHaveLength(0);
   });
 
+  it("sanitizes legacy Command(update=...) repr in listMessages", async () => {
+    const store = new MemoryRunEventStore();
+    // Legacy buggy content: str(Command(update={'messages':[ToolMessage(content='actual result')]}))
+    await put(store, "r1", "llm.tool.result", "message", "Command(update={'messages':[ToolMessage(content='actual result')]})", {});
+    // Normal structured content — should pass through unchanged.
+    await put(store, "r1", "llm.ai.response", "message", { type: "ai", content: "normal answer" }, {});
+    // Plain string that does NOT start with "Command(update=" — unchanged.
+    await put(store, "r1", "llm.tool.result", "message", "just a plain tool result", {});
+
+    const messages = await store.listMessages("thread-1", { limit: 100 });
+    expect(messages).toHaveLength(3);
+    expect(messages[0]!.content).toBe("actual result");
+    expect(messages[1]!.content).toEqual({ type: "ai", content: "normal answer" });
+    expect(messages[2]!.content).toBe("just a plain tool result");
+  });
+
+  it("sanitizes legacy Command repr in listEvents", async () => {
+    const store = new MemoryRunEventStore();
+    await put(store, "r1", "llm.tool.result", "message", "Command(update={'messages':[ToolMessage(content='extracted')]})", {});
+
+    const events = await store.listEvents("thread-1", "r1", { limit: 100 });
+    expect(events).toHaveLength(1);
+    expect(events[0]!.content).toBe("extracted");
+  });
+
+  it("sanitizes legacy Command repr in listMessagesByRun", async () => {
+    const store = new MemoryRunEventStore();
+    await put(store, "r1", "llm.tool.result", "message", "Command(update={'messages':[ToolMessage(content='by-run value')]})", {});
+
+    const messages = await store.listMessagesByRun("thread-1", "r1", { limit: 100 });
+    expect(messages).toHaveLength(1);
+    expect(messages[0]!.content).toBe("by-run value");
+  });
+
+  it("leaves non-matching Command-like strings unchanged", async () => {
+    const store = new MemoryRunEventStore();
+    // Starts with "Command(update=" but has no ToolMessage inside — returned as-is.
+    await put(store, "r1", "llm.tool.result", "message", "Command(update={'goto': 'NODE_X'})", {});
+
+    const messages = await store.listMessages("thread-1", { limit: 100 });
+    expect(messages[0]!.content).toBe("Command(update={'goto': 'NODE_X'})");
+  });
+
   it("combines task_id + after_seq for subagent backfill paging", async () => {
     const store = new MemoryRunEventStore();
     for (let i = 0; i < 4; i++) {
@@ -95,5 +139,35 @@ describe("RunEventStore.listEvents filters", () => {
       event_types: ["subagent.step"],
     });
     expect(next.map((e) => e.content)).toEqual(["k1-s2", "k1-s3"]);
+  });
+});
+
+describe("sanitizeLegacyCommandRepr", () => {
+  it("extracts single-quoted ToolMessage content", () => {
+    expect(
+      sanitizeLegacyCommandRepr("Command(update={'messages':[ToolMessage(content='hello')]})"),
+    ).toBe("hello");
+  });
+
+  it("extracts double-quoted ToolMessage content", () => {
+    expect(
+      sanitizeLegacyCommandRepr('Command(update={"messages":[ToolMessage(content="hello")]}'),
+    ).toBe("hello");
+  });
+
+  it("returns non-string content unchanged", () => {
+    expect(sanitizeLegacyCommandRepr({ type: "tool", content: "x" })).toEqual({ type: "tool", content: "x" });
+    expect(sanitizeLegacyCommandRepr(42)).toBe(42);
+    expect(sanitizeLegacyCommandRepr(null)).toBe(null);
+  });
+
+  it("returns plain strings unchanged", () => {
+    expect(sanitizeLegacyCommandRepr("just a normal string")).toBe("just a normal string");
+  });
+
+  it("returns Command-without-ToolMessage unchanged", () => {
+    expect(sanitizeLegacyCommandRepr("Command(update={'goto': 'X'})")).toBe(
+      "Command(update={'goto': 'X'})",
+    );
   });
 });

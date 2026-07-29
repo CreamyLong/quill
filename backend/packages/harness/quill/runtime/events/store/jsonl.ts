@@ -26,6 +26,7 @@ import path from "node:path";
 import { nowIso } from "../../../utils/time.js";
 import {
   RunEventStore,
+  sanitizeLegacyCommandRepr,
   type ListEventsOptions,
   type ListMessagesOptions,
   type PutEventArgs,
@@ -160,7 +161,9 @@ export class JsonlRunEventStore extends RunEventStore {
           continue;
         }
         try {
-          events.push(JSON.parse(line) as RunEventRecord);
+          const record = JSON.parse(line) as RunEventRecord;
+          record.content = sanitizeLegacyCommandRepr(record.content);
+          events.push(record);
         } catch {
           logger.debug("Skipping malformed JSONL line in %s", f);
         }
@@ -182,7 +185,9 @@ export class JsonlRunEventStore extends RunEventStore {
         continue;
       }
       try {
-        events.push(JSON.parse(line) as RunEventRecord);
+        const record = JSON.parse(line) as RunEventRecord;
+        record.content = sanitizeLegacyCommandRepr(record.content);
+        events.push(record);
       } catch {
         logger.debug("Skipping malformed JSONL line in %s", filePath);
       }

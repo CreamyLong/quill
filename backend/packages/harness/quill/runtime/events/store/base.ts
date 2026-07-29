@@ -75,6 +75,40 @@ export interface UserScopedOptions {
 }
 
 /**
+ * Regex to extract the inner ToolMessage content from a legacy
+ * ``str(Command(...))`` repr.
+ *
+ * Pre-date the ``onToolEnd`` fix in ``journal.ts`` stored
+ * ``str(Command(update={'messages':[ToolMessage(content='X', ...)]}))`` as the
+ * tool_result content. New runs store ``'X'`` directly. This pattern matches
+ * the first ``ToolMessage(content=...)`` inside the repr and captures the
+ * inner string regardless of quote style.
+ */
+const _LEGACY_CMD_INNER_CONTENT_RE =
+  /ToolMessage\(content=(?<q>['"])(?<inner>.*?)\k<q>/;
+
+/**
+ * Recover the inner ToolMessage text from a legacy ``str(Command(...))`` repr.
+ *
+ * Runs that pre-date the ``onToolEnd`` fix in ``journal.ts`` stored
+ * ``str(Command(update={'messages':[ToolMessage(content='X', ...)]}))`` as the
+ * tool_result content. New runs store ``'X'`` directly. For old threads, try
+ * to extract ``'X'`` defensively; return the original value if extraction
+ * fails (still no worse than the current checkpoint-based fallback, which is
+ * broken for summarized threads anyway).
+ *
+ * Non-string content and strings that do not start with ``Command(update=``
+ * are returned unchanged, so this is safe to apply to every read.
+ */
+export function sanitizeLegacyCommandRepr(content: unknown): unknown {
+  if (typeof content !== "string" || !content.startsWith("Command(update=")) {
+    return content;
+  }
+  const match = _LEGACY_CMD_INNER_CONTENT_RE.exec(content);
+  return match ? match.groups!.inner : content;
+}
+
+/**
  * Run event stream storage interface.
  *
  * All implementations must guarantee:

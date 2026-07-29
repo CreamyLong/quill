@@ -8,6 +8,7 @@
 import { nowIso } from "../../../utils/time.js";
 import {
   RunEventStore,
+  sanitizeLegacyCommandRepr,
   type ListEventsOptions,
   type ListMessagesOptions,
   type PutEventArgs,
@@ -102,18 +103,20 @@ export class MemoryRunEventStore extends RunEventStore {
     // contiguous slice located with bisect (O(log m)) rather than a full scan.
     const messages = this._messages.get(threadId) ?? [];
 
+    let result: RunEventRecord[];
     if (before_seq !== null && before_seq !== undefined) {
       // Records with seq < before_seq, then the last `limit` of them.
       const hi = bisectLeft(messages, before_seq);
-      return messages.slice(Math.max(0, hi - limit), hi);
+      result = messages.slice(Math.max(0, hi - limit), hi);
     } else if (after_seq !== null && after_seq !== undefined) {
       // Records with seq > after_seq, then the first `limit` of them.
       const lo = bisectRight(messages, after_seq);
-      return messages.slice(lo, lo + limit);
+      result = messages.slice(lo, lo + limit);
     } else {
       // Return the latest `limit` records, ascending.
-      return messages.slice(Math.max(0, messages.length - limit));
+      result = messages.slice(Math.max(0, messages.length - limit));
     }
+    return result.map((r) => ({ ...r, content: sanitizeLegacyCommandRepr(r.content) }));
   }
 
   async listEvents(
@@ -146,7 +149,7 @@ export class MemoryRunEventStore extends RunEventStore {
     if (task_id !== null && task_id !== undefined) {
       runEvents = runEvents.filter((e) => e.metadata?.task_id === task_id);
     }
-    return runEvents.slice(0, limit);
+    return runEvents.slice(0, limit).map((r) => ({ ...r, content: sanitizeLegacyCommandRepr(r.content) }));
   }
 
   async listMessagesByRun(threadId: string, runId: string, options: ListMessagesOptions = {}): Promise<RunEventRecord[]> {
@@ -157,12 +160,13 @@ export class MemoryRunEventStore extends RunEventStore {
     const lo = after_seq === null || after_seq === undefined ? 0 : bisectRight(messages, after_seq);
     const hi = before_seq === null || before_seq === undefined ? messages.length : bisectLeft(messages, before_seq);
     const window = messages.slice(lo, hi);
-    // An `after_seq` cursor pages forward (first `limit`); otherwise return the
-    // last `limit` (the latest page, or the page ending just before `before_seq`).
-    if (after_seq !== null && after_seq !== undefined) {
-      return window.slice(0, limit);
-    }
-    return window.slice(Math.max(0, window.length - limit));
+    const sliced =
+      // An `after_seq` cursor pages forward (first `limit`); otherwise return the
+      // last `limit` (the latest page, or the page ending just before `before_seq`).
+      after_seq !== null && after_seq !== undefined
+        ? window.slice(0, limit)
+        : window.slice(Math.max(0, window.length - limit));
+    return sliced.map((r) => ({ ...r, content: sanitizeLegacyCommandRepr(r.content) }));
   }
 
   async countMessages(threadId: string, _options: UserScopedOptions = {}): Promise<number> {
