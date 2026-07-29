@@ -81,7 +81,7 @@ def _yaml_dump(data: Any) -> str:
 
 def _default_tools() -> list[dict[str, Any]]:
     return [
-        {"name": "image_search", "use": "quill.community.image_search.tools:image_search_tool", "group": "web", "max_results": 5},
+        {"name": "image_search", "use": "quill.community.image_search.tools:imageSearchTool", "group": "web", "max_results": 5},
         {"name": "ls", "use": "quill.sandbox.tools:ls_tool", "group": "file:read"},
         {"name": "read_file", "use": "quill.sandbox.tools:read_file_tool", "group": "file:read"},
         {"name": "glob", "use": "quill.sandbox.tools:glob_tool", "group": "file:read"},

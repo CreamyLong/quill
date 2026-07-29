@@ -590,7 +590,7 @@ tools:
   # For Docker deployments, use the Docker service name instead of localhost.
   # - name: web_search
   #   group: web
-  #   use: quill.community.searxng.tools:web_search_tool
+  #   use: quill.community.searxng.tools:webSearchTool
   #   base_url: http://localhost:8088   # SearXNG instance URL (default: :8088; Docker: http://searxng:8080)
   #   max_results: 5                     # Maximum number of search results
 
@@ -600,7 +600,7 @@ tools:
   # Avoid putting literal API keys in config.yaml; use the $VAR form instead.
   # - name: web_search
   #   group: web
-  #   use: quill.community.serper.tools:web_search_tool
+  #   use: quill.community.serper.tools:webSearchTool
   #   max_results: 5   # capped at 10 by the Serper provider
   #   # api_key: $SERPER_API_KEY  # Optional explicit env-var reference
 
@@ -610,28 +610,28 @@ tools:
   # `backend: brave` option above, this calls the official Brave API directly.
   # - name: web_search
   #   group: web
-  #   use: quill.community.brave.tools:web_search_tool
+  #   use: quill.community.brave.tools:webSearchTool
   #   max_results: 5                  # Capped at 20 by the Brave Search API
   #   # api_key: $BRAVE_SEARCH_API_KEY  # Optional if the env var is set
 
   # Web search tool (requires Tavily API key)
   # - name: web_search
   #   group: web
-  #   use: quill.community.tavily.tools:web_search_tool
+  #   use: quill.community.tavily.tools:webSearchTool
   #   max_results: 5
   #   # api_key: $TAVILY_API_KEY  # Set if needed
 
   # Web search tool (uses InfoQuest, requires InfoQuest API key)
   # - name: web_search
   #   group: web
-  #   use: quill.community.infoquest.tools:web_search_tool
+  #   use: quill.community.infoquest.tools:webSearchTool
   #   # Used to limit the scope of search results, only returns content within the specified time range. Set to -1 to disable time filtering
   #   search_time_range: 10
 
   # Web search tool (uses Exa, requires EXA_API_KEY)
   # - name: web_search
   #   group: web
-  #   use: quill.community.exa.tools:web_search_tool
+  #   use: quill.community.exa.tools:webSearchTool
   #   max_results: 5
   #   search_type: auto  # Options: auto, neural, keyword
   #   contents_max_characters: 1000
@@ -640,7 +640,7 @@ tools:
   # Web search tool (uses Firecrawl, requires FIRECRAWL_API_KEY)
   # - name: web_search
   #   group: web
-  #   use: quill.community.firecrawl.tools:web_search_tool
+  #   use: quill.community.firecrawl.tools:webSearchTool
   #   max_results: 5
   #   # api_key: $FIRECRAWL_API_KEY
 
@@ -652,7 +652,7 @@ tools:
   # https://groundroute.ai/keys
   # - name: web_search
   #   group: web
-  #   use: quill.community.groundroute.tools:web_search_tool
+  #   use: quill.community.groundroute.tools:webSearchTool
   #   max_results: 5                  # Clamped to 1-50 by GroundRoute
   #   # api_key: $GROUNDROUTE_API_KEY  # Optional if the env var is set
   
@@ -660,7 +660,7 @@ tools:
   # self-host or cloud. Cloud requires CRW_API_KEY; self-host may need no key.)
   # - name: web_search
   #   group: web
-  #   use: quill.community.fastcrw.tools:web_search_tool
+  #   use: quill.community.fastcrw.tools:webSearchTool
   #   max_results: 5
   #   # api_key: $CRW_API_KEY
   #   # base_url: https://fastcrw.com/api   # default cloud; set to e.g. http://localhost:3000 for self-host
@@ -673,7 +673,7 @@ tools:
   # Comment out the Jina AI web_fetch entry below before enabling this one.
   # - name: web_fetch
   #   group: web
-  #   use: quill.community.browserless.tools:web_fetch_tool
+  #   use: quill.community.browserless.tools:webFetchTool
   #   base_url: http://localhost:3032    # Browserless instance URL (default: :3032; Docker: http://browserless:3000)
   #   # token: $BROWSERLESS_TOKEN        # API token (required for Browserless Cloud; optional for self-hosted)
   #   timeout_s: 30                       # Request timeout in seconds
@@ -690,7 +690,7 @@ tools:
   # Comment out the Jina AI web_fetch entry below before enabling this one.
   # - name: web_fetch
   #   group: web
-  #   use: quill.community.crawl4ai.tools:web_fetch_tool
+  #   use: quill.community.crawl4ai.tools:webFetchTool
   #   base_url: http://localhost:11235   # Crawl4AI server URL (Docker: http://crawl4ai:11235)
   #   timeout: 30                         # Request timeout in seconds
   #   # filter: fit                       # Markdown filter: fit (default) | raw | bm25 | llm
@@ -704,7 +704,7 @@ tools:
   # of localhost.
   # - name: web_capture
   #   group: web
-  #   use: quill.community.browserless.tools:web_capture_tool
+  #   use: quill.community.browserless.tools:webCaptureTool
   #   base_url: http://localhost:3032       # Browserless instance URL (Docker: http://browserless:3000)
   #   # token: $BROWSERLESS_TOKEN           # Required for Browserless Cloud; optional for self-hosted
   #   timeout_s: 30                         # Request timeout in seconds
@@ -724,13 +724,13 @@ tools:
   # Comment out the Jina AI web_fetch entry below before enabling this one.
   # - name: web_fetch
   #   group: web
-  #   use: quill.community.exa.tools:web_fetch_tool
+  #   use: quill.community.exa.tools:webFetchTool
   #   # api_key: $EXA_API_KEY
 
   # Web fetch tool (uses Jina AI reader)
   - name: web_fetch
     group: web
-    use: quill.community.jina_ai.tools:web_fetch_tool
+    use: quill.community.jina_ai.tools:webFetchTool
     timeout: 10
     # Optional proxy for restricted networks / Docker / WSL.
     # Use host.docker.internal instead of 127.0.0.1 when the proxy runs on the host.
@@ -740,7 +740,7 @@ tools:
   # Web fetch tool (uses InfoQuest)
   # - name: web_fetch
   #   group: web
-  #   use: quill.community.infoquest.tools:web_fetch_tool
+  #   use: quill.community.infoquest.tools:webFetchTool
   #   # Overall timeout for the entire crawling process (in seconds). Set to positive value to enable, -1 to disable
   #   timeout: 10
   #   # Waiting time after page loading (in seconds). Set to positive value to enable, -1 to disable
@@ -751,7 +751,7 @@ tools:
   # Web fetch tool (uses Firecrawl, requires FIRECRAWL_API_KEY)
   # - name: web_fetch
   #   group: web
-  #   use: quill.community.firecrawl.tools:web_fetch_tool
+  #   use: quill.community.firecrawl.tools:webFetchTool
   #   # api_key: $FIRECRAWL_API_KEY
 
   # Web fetch tool (uses GroundRoute, requires GROUNDROUTE_API_KEY)
@@ -760,7 +760,7 @@ tools:
   # Comment out the Jina AI web_fetch entry above before enabling this one.
   # - name: web_fetch
   #   group: web
-  #   use: quill.community.groundroute.tools:web_fetch_tool
+  #   use: quill.community.groundroute.tools:webFetchTool
   #   # api_key: $GROUNDROUTE_API_KEY
   
   # Web fetch tool (uses fastCRW - Firecrawl-compatible web scraper, single binary,
@@ -769,7 +769,7 @@ tools:
   # Comment out the Jina AI web_fetch entry above before enabling this one.
   # - name: web_fetch
   #   group: web
-  #   use: quill.community.fastcrw.tools:web_fetch_tool
+  #   use: quill.community.fastcrw.tools:webFetchTool
   #   # api_key: $CRW_API_KEY
   #   # base_url: https://fastcrw.com/api   # default cloud; set to e.g. http://localhost:3000 for self-host
 
@@ -777,13 +777,13 @@ tools:
   # Use this to find reference images before image generation
   - name: image_search
     group: web
-    use: quill.community.image_search.tools:image_search_tool
+    use: quill.community.image_search.tools:imageSearchTool
     max_results: 5
 
   # Image search tool (uses InfoQuest)
   # - name: image_search
   #   group: web
-  #   use: quill.community.infoquest.tools:image_search_tool
+  #   use: quill.community.infoquest.tools:imageSearchTool
   #   # Used to limit the scope of image search results, only returns content within the specified time range. Set to -1 to disable time filtering
   #   image_search_time_range: 10
   #   # Image size filter. Options: "l" (large), "m" (medium), "i" (icon).
@@ -795,7 +795,7 @@ tools:
   # Avoid putting literal API keys in config.yaml; use the $VAR form instead.
   # - name: image_search
   #   group: web
-  #   use: quill.community.serper.tools:image_search_tool
+  #   use: quill.community.serper.tools:imageSearchTool
   #   max_results: 5   # capped at 10 by the Serper provider
   #   # api_key: $SERPER_API_KEY  # Optional explicit env-var reference
 
@@ -805,7 +805,7 @@ tools:
   # Avoid putting literal API keys in config.yaml; use the $VAR form instead.
   # - name: image_search
   #   group: web
-  #   use: quill.community.brave.tools:image_search_tool
+  #   use: quill.community.brave.tools:imageSearchTool
   #   max_results: 5   # capped at 200 by Brave Image Search
   #   # country: US
   #   # search_lang: en

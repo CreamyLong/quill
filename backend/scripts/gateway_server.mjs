@@ -305,7 +305,18 @@ async function loadCommunityTools() {
       const url = new URL(jsPath.replace(/^quill\//, "../dist/packages/harness/quill/"), import.meta.url);
       const mod = await import(url.href);
       for (const { name, exportName } of wanted) {
-        const tool = mod[exportName];
+        let tool = mod[exportName];
+        // Fallback: config historically references snake_case export names
+        // (e.g. `web_search_tool`) while the TypeScript sources export
+        // camelCase (`webSearchTool`). Retry with the converted name so both
+        // forms resolve.
+        if (tool === undefined && exportName.includes("_")) {
+          const camel = exportName.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+          tool = mod[camel];
+          if (tool !== undefined) {
+            console.log(`[gateway] resolved '${exportName}' → '${camel}' in ${url.href}`);
+          }
+        }
         if (tool === undefined) {
           console.warn(`[gateway] tool export '${exportName}' not found in ${url.href}`);
           continue;

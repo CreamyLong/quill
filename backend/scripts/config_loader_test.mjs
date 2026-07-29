@@ -68,14 +68,14 @@ function testLoadWithEnvVar() {
 
 function testToolConfigPreservesExtraKeys() {
   withTempConfig(
-    `models:\n  - name: m\n    use: langchain_openai:ChatOpenAI\n    model: gpt-4o-mini\ntools:\n  - name: web_search\n    group: web\n    use: quill.community.tavily.tools:web_search_tool\n    api_key: secret-key\n    max_results: 7\n`,
+    `models:\n  - name: m\n    use: langchain_openai:ChatOpenAI\n    model: gpt-4o-mini\ntools:\n  - name: web_search\n    group: web\n    use: quill.community.tavily.tools:webSearchTool\n    api_key: secret-key\n    max_results: 7\n`,
     (file) => {
       const cfg = loadAppConfigFromFile(file);
       assert.strictEqual(cfg.tools.length, 1);
       const tool = cfg.tools[0];
       assert.strictEqual(tool.name, "web_search");
       assert.strictEqual(tool.group, "web");
-      assert.strictEqual(tool.use, "quill.community.tavily.tools:web_search_tool");
+      assert.strictEqual(tool.use, "quill.community.tavily.tools:webSearchTool");
       // Extra provider-specific keys must survive (mirrors buildModelConfig).
       assert.strictEqual(tool.api_key, "secret-key");
       assert.strictEqual(tool.max_results, 7);
