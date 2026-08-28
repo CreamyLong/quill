@@ -79,6 +79,8 @@ import { safetyFinishReasonMiddleware } from "../middlewares/safety_finish_reaso
 import { clarificationMiddleware } from "../middlewares/clarification_middleware.js";
 import { presentFilesMiddleware } from "../middlewares/present_files_middleware.js";
 import { createGuardrailMiddleware } from "../../guardrails/loader.js";
+import { toolResultSanitizationMiddleware } from "../../middlewares/tool_result_sanitization.js";
+import { createLifecycleHookMiddleware, type LifecycleHookMiddlewareOptions } from "../../middlewares/lifecycle_middleware.js";
 
 const _BOOTSTRAP_SKILL_NAMES = new Set<string>(["bootstrap"]);
 
