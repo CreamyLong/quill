@@ -1,6 +1,7 @@
 // lib.rs — Tauri builder + command registration.
 
 mod fs_bridge;
+mod system_bridge;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -8,6 +9,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             fs_bridge::pick_folder_blocking,
             fs_bridge::validate_path,
@@ -20,6 +23,11 @@ pub fn run() {
             fs_bridge::create_directory,
             fs_bridge::get_file_info,
             fs_bridge::search_files,
+            system_bridge::get_clipboard_text,
+            system_bridge::set_clipboard_text,
+            system_bridge::get_clipboard_image_base64,
+            system_bridge::show_notification,
+            system_bridge::read_system_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
