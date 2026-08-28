@@ -352,6 +352,112 @@ fn glob_match(name: &str, pattern: &str) -> bool {
     pi == p.len()
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn glob_matches_literal() {
+        assert!(glob_match("main.rs", "main.rs"));
+        assert!(!glob_match("main.rs", "lib.rs"));
+    }
+
+    #[test]
+    fn glob_matches_star() {
+        assert!(glob_match("main.rs", "*.rs"));
+        assert!(glob_match("a.tar.gz", "*.gz"));
+        assert!(glob_match("anything", "*"));
+        assert!(!glob_match("main.ts", "*.rs"));
+    }
+
+    #[test]
+    fn glob_matches_question_mark() {
+        assert!(glob_match("a1b", "a?b"));
+        assert!(!glob_match("ab", "a?b"));
+    }
+
+    #[test]
+    fn glob_handles_leading_star() {
+        // Leading `*` exercises the backtracking path (star_s advancement).
+        assert!(glob_match("src-main.rs", "*main.rs"));
+        assert!(glob_match("xaaay", "x*y"));
+        assert!(glob_match("a-b-c.txt", "*-c.txt"));
+        assert!(!glob_match("a-b-d.txt", "*-c.txt"));
+    }
+
+    #[test]
+    fn search_files_hits_and_caps() {
+        let root = std::env::temp_dir().join(format!("quill_search_test_{}", std::process::id()));
+        let sub = root.join("sub");
+        std::fs::create_dir_all(&sub).unwrap();
+        std::fs::write(root.join("alpha.txt"), "a").unwrap();
+        std::fs::write(sub.join("alpha-beta.txt"), "b").unwrap();
+        std::fs::write(sub.join("other.md"), "c").unwrap();
+
+        let hits = tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(search_files(root.to_string_lossy().to_string(), "alpha*".into()))
+            .expect("search should succeed");
+        let names: Vec<&str> = hits.iter().map(|h| h.name.as_str()).collect();
+        assert!(names.contains(&"alpha.txt"));
+        assert!(names.contains(&"alpha-beta.txt"));
+        assert!(!names.contains(&"other.md"));
+
+        // Empty pattern is rejected.
+        let err = tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(search_files(root.to_string_lossy().to_string(), "  ".into()));
+        assert!(err.is_err());
+
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn get_file_info_reports_missing() {
+        let info = tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(get_file_info("/nonexistent/quill/test/path".into()));
+        assert!(!info.exists);
+    }
+
+    #[test]
+    fn file_crud_roundtrip() {
+        let root = std::env::temp_dir().join(format!("quill_crud_test_{}", std::process::id()));
+        let file = root.join("nested").join("note.txt");
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        // write (auto-creates parents) → info → rename → delete
+        rt.block_on(write_file_text(
+            file.to_string_lossy().to_string(),
+            "hello".into(),
+            None,
+        ))
+        .expect("write should succeed");
+        let info = rt.block_on(get_file_info(file.to_string_lossy().to_string()));
+        assert!(info.exists && info.is_file && info.size == 5);
+
+        let renamed = root.join("renamed.txt");
+        rt.block_on(rename_path(
+            file.to_string_lossy().to_string(),
+            renamed.to_string_lossy().to_string(),
+        ))
+        .expect("rename should succeed");
+        assert!(!file.exists() && renamed.exists());
+
+        // Refuse to overwrite.
+        std::fs::write(root.join("existing.txt"), "x").unwrap();
+        let err = rt.block_on(rename_path(
+            renamed.to_string_lossy().to_string(),
+            root.join("existing.txt").to_string_lossy().to_string(),
+        ));
+        assert!(err.is_err(), "rename must refuse to overwrite");
+
+        rt.block_on(delete_path(root.to_string_lossy().to_string()))
+            .expect("recursive delete should succeed");
+        assert!(!root.exists());
+    }
+}
+
 fn walk_dir(root: &Path, depth: usize) -> anyhow::Result<FsNode> {
     let mut entries: Vec<_> = fs::read_dir(root)
         .map_err(|e| anyhow::anyhow!("read_dir {root:?}: {e}"))?

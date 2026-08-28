@@ -266,6 +266,11 @@ pub async fn cancel_sync() -> Result<(), String> {
 
 /// Walk the workspace and build the sync manifest (skips VCS/build noise).
 fn scan_workspace(root: &Path) -> Result<Vec<ManifestEntry>, String> {
+    // WalkDir silently yields a single entry for a file root instead of an
+    // error — reject it here so callers can't sync a lone file as a workspace.
+    if !root.is_dir() {
+        return Err(format!("Workspace is not a directory: {}", root.display()));
+    }
     let mut files: Vec<ManifestEntry> = Vec::new();
     for entry in WalkDir::new(root)
         .follow_links(false)
@@ -313,6 +318,37 @@ fn should_ignore_sync(p: &Path) -> bool {
             )
         })
         .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scan_workspace_skips_noise_and_uses_forward_slashes() {
+        let root = std::env::temp_dir().join(format!("quill_sync_scan_{}", std::process::id()));
+        std::fs::create_dir_all(root.join("node_modules/pkg")).unwrap();
+        std::fs::create_dir_all(root.join("src/nested")).unwrap();
+        std::fs::write(root.join("top.txt"), "a").unwrap();
+        std::fs::write(root.join("src/nested/deep.rs"), "b").unwrap();
+        std::fs::write(root.join("node_modules/pkg/junk.js"), "c").unwrap();
+
+        let files = scan_workspace(&root).expect("scan should succeed");
+        let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+        assert!(paths.contains(&"top.txt"));
+        assert!(paths.contains(&"src/nested/deep.rs"), "relative paths use forward slashes");
+        assert!(!paths.iter().any(|p| p.contains("node_modules")), "build noise skipped");
+
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn scan_workspace_rejects_file_root() {
+        let file = std::env::temp_dir().join(format!("quill_sync_notdir_{}", std::process::id()));
+        std::fs::write(&file, "x").unwrap();
+        assert!(scan_workspace(&file).is_err());
+        std::fs::remove_file(&file).ok();
+    }
 }
 
 // Keep HashMap in scope for future manifest caching (path → last synced mtime).
