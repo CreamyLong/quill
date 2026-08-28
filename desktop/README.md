@@ -84,11 +84,37 @@ cargo install tauri-cli
 ## Development
 
 ```bash
+# One command: TS Gateway + frontend (no login wall) + Tauri shell.
+# Ports are health-probed; zombie port-forwards are skipped automatically.
+make desktop
+
+# Or gateway + frontend only (launch Tauri yourself):
+./scripts/desktop_dev.sh --no-tauri
+
+# Manual (fine-grained control):
 cd desktop
 npm install
-npm run tauri dev
+npm run tauri dev -- --config '{"build":{"devUrl":"http://localhost:3200"}}'
 # First build compiles Rust (~3-5 min), subsequent are incremental.
 ```
+
+## Troubleshooting
+
+**White window / config pages (models, skills, MCP) dead.** The frontend
+talks to the TS Gateway over localhost TCP. IDE port-forwarding and tunnel
+tools can occupy loopback ports in a *zombie* state — the socket accepts
+connections but never answers HTTP (`curl` exits with code 52 / HTTP 000).
+Every Quill service then silently fails. `make desktop` probes candidate
+ports (gateway: 8200-8202, frontend: 3200-3202) and skips unresponsive ones.
+To check a suspect port: `curl -m 3 --noproxy '*' http://127.0.0.1:<port>/health`
+— empty reply means a zombie; find the owner with `lsof -i TCP:<port> -P`.
+Note IPv4/IPv6: a zombie holding IPv4 may coexist with a healthy server on
+`[::1]` of the same port; prefer moving Quill to a clean port.
+
+**Login wall.** The desktop flow starts the frontend with
+`QUILL_AUTH_DISABLED=1` (built-in mode; inert when `QUILL_ENV=production`),
+which renders the workspace as the built-in admin `default` user instead of
+redirecting to `/login`.
 
 ## Build (production)
 

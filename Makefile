@@ -1,6 +1,6 @@
 # SciTops - Unified Development Environment
 
-.PHONY: help config config-upgrade check install dev dev-daemon start start-daemon nginx stop up down clean docker-init docker-start docker-stop docker-logs docker-logs-frontend docker-logs-gateway
+.PHONY: help config config-upgrade check install dev dev-daemon start start-daemon nginx stop desktop up down clean docker-init docker-start docker-stop docker-logs docker-logs-frontend docker-logs-gateway
 
 BASH ?= bash
 # Detect OS for Windows compatibility
@@ -20,6 +20,7 @@ help:
 	@echo "  make install         - Install all dependencies (frontend + backend + pre-commit hooks)"
 	@echo "  make setup-sandbox   - Pre-pull sandbox container image (recommended)"
 	@echo "  make dev             - Start all services in development mode (with hot-reloading) at localhost:2126"
+	@echo "  make desktop         - Start the desktop stack (Gateway + frontend + Tauri shell, no login wall)"
 	@echo "  make dev-daemon      - Start dev services in background (daemon mode)"
 	@echo "  make start           - Start all services in production mode (optimized, no hot-reloading)"
 	@echo "  make start-daemon    - Start prod services in background (daemon mode)"
@@ -74,6 +75,12 @@ setup-sandbox:
 dev:
 	@$(RUN_WITH_GIT_BASH) ./scripts/check.sh
 	@$(RUN_WITH_GIT_BASH) ./scripts/serve.sh --dev
+
+# Desktop stack: TS Gateway + frontend (auth disabled) + Tauri shell.
+# Ports are health-probed first; zombie port-forwards (accept TCP, never
+# answer HTTP) are skipped automatically.
+desktop:
+	@$(RUN_WITH_GIT_BASH) ./scripts/desktop_dev.sh
 
 # Start all services in production mode (with optimizations)
 start:
