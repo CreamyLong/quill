@@ -78,6 +78,7 @@ import { tokenBudgetMiddleware } from "../middlewares/token_budget_middleware.js
 import { safetyFinishReasonMiddleware } from "../middlewares/safety_finish_reason_middleware.js";
 import { clarificationMiddleware } from "../middlewares/clarification_middleware.js";
 import { presentFilesMiddleware } from "../middlewares/present_files_middleware.js";
+import { createGuardrailMiddleware } from "../../guardrails/loader.js";
 
 const _BOOTSTRAP_SKILL_NAMES = new Set<string>(["bootstrap"]);
 
@@ -270,17 +271,19 @@ function _createTodoListMiddleware(isPlanMode: boolean): MiddlewareDefinition | 
  *   5. Sandbox             — sandbox lifecycle management
  *   6. DanglingToolCall    — patch interrupted tool calls
  *   7. LLMErrorHandling    — retry/recover LLM errors
- *   8. SandboxAudit        — audit bash tool calls
- *   9. ToolErrorHandling   — convert tool exceptions to ToolMessages
+ *   8. Guardrail           — pre-tool-call authorization (if guardrails enabled)
+ *   9. SandboxAudit        — audit bash tool calls
+ *   10. ToolErrorHandling  — convert tool exceptions to ToolMessages
  *
- * GuardrailMiddleware is omitted (requires provider resolution via
- * `resolve_variable`, not yet ported).
+ * GuardrailMiddleware is inserted from `appConfig.guardrails` via
+ * `createGuardrailMiddleware` (see `guardrails/loader.ts`). Provider
+ * resolution is lazy (first tool call) because this factory is synchronous.
  */
 function buildLeadRuntimeMiddlewares(
   appConfig: AppConfig,
   userContext: { userId?: string | null; getUserId?: () => string | null },
 ): MiddlewareDefinition[] {
-  return [
+  const chain: MiddlewareDefinition[] = [
     inputSanitizationMiddleware(),
     toolOutputBudgetMiddleware(appConfig.toolOutput),
     threadDataMiddleware({ userId: userContext.userId }),
@@ -288,10 +291,21 @@ function buildLeadRuntimeMiddlewares(
     sandboxMiddleware({ userId: userContext.userId, getUserId: userContext.getUserId }),
     danglingToolCallMiddleware(),
     llmErrorHandlingMiddleware(),
+  ];
+
+  // [8] Guardrail — pre-tool-call authorization (Codex exec-policy style
+  //     command-level rules, or any GuardrailProvider via config).
+  const guardrail = createGuardrailMiddleware(appConfig.guardrails);
+  if (guardrail !== null) {
+    chain.push(guardrail);
+  }
+
+  chain.push(
     sandboxAuditMiddleware(),
     toolErrorHandlingMiddleware(),
     presentFilesMiddleware(),
-  ];
+  );
+  return chain;
 }
 
 // ---------------------------------------------------------------------------

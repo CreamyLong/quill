@@ -1585,6 +1585,63 @@ run_events:
 #     config:
 #       key: value
 
+# --- Option 4: CommandPolicyProvider (command-level allow/deny via regex rules) ---
+# Inspired by Codex's exec-policy: define allow/deny regex rules matching against
+# tool input (the `target` field). Deny rules take precedence; when none match,
+# the `default` decision is used. Scope to specific tools with `tool_targets`.
+# See docs/harness-research.md for full design specs.
+# guardrails:
+#   enabled: true
+#   provider:
+#     use: quill.guardrails.builtin:CommandPolicyProvider
+#     config:
+#       # Rules are evaluated in order; first match wins.
+#       # Each rule: { type: "allow" | "deny", pattern: <regex>, tool_targets: [...] }
+#       # tool_targets: null means all tools; list means scoped to those tools.
+#       rules:
+#         # Deny dangerous shell commands (deny takes precedence below)
+#         - type: deny
+#           pattern: "(rm\\s+-rf|sudo\\s+rm|mkfs|fdisk|dd\\s+if=)"
+#           tool_targets: ["bash"]
+#         # Allow read-only operations without restriction
+#         - type: allow
+#           pattern: "^\\s*(cat|ls|pwd|echo|head|tail|wc|grep\\s+-v|diff|less|more)"
+#           tool_targets: ["bash"]
+#         # Allow read_file on common data formats
+#         - type: allow
+#           pattern: "\\.(json|yaml|yml|csv|ts|tsx|js|jsx|py|md|txt|toml)$"
+#           tool_targets: ["read_file"]
+#       # Default decision when no rule matches: "allow" or "deny"
+#       default: deny
+#       # Tool name mapping: map generic names to actual tool names
+#       # tool_name_mappings:
+#         # command: bash
+#         # read_command: read_file
+
+# ============================================================================
+# Scheduled Tasks Configuration
+# ============================================================================
+# Cron/interval-driven scheduled runs — inspired by OpenClaw (cron/heartbeat) and
+# OpenWork (automations engine). Provides task management, a cron-parser + scheduler,
+# and a full CRUD REST API at /api/langgraph/scheduled-tasks.
+#
+# Features:
+#   - Support for interval-based (every N seconds) and cron expression schedules
+#   - File-based persistence (JSON) or in-memory store
+#   - Manual trigger via POST /scheduled-tasks/:id/run
+#   - In-flight guard to prevent double-firing
+#
+# Configuration is done via the Gateway API (POST /scheduled-tasks), not config.yaml.
+# The `storage` section below controls where scheduled tasks are persisted.
+#
+# scheduled_tasks:
+#   # Storage backend: "file" for persistent JSON file, "memory" for volatile
+#   storage: file
+#   # Path for file-based storage (relative to project root)
+#   storage_path: scheduled_tasks.json
+#   # Tick interval in milliseconds for the scheduler (default: 30000 = 30s)
+#   tick_ms: 30000
+
 # ============================================================================
 # Circuit Breaker Configuration
 # ============================================================================

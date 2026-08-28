@@ -42,6 +42,7 @@ import {
   uploadsMiddleware,
 } from "../agents/middlewares/builtin.js";
 import { deferredToolFilterMiddleware } from "../agents/middlewares/deferred_tool_filter_middleware.js";
+import { createGuardrailMiddleware } from "../guardrails/loader.js";
 import { createChatModel as createChatModelFromFactory } from "../models/factory.js";
 import type {
   SandboxState,
@@ -156,16 +157,22 @@ function buildSubagentRuntimeMiddlewares(options: {
   // [3] Patch interrupted/incomplete tool calls.
   chain.push(danglingToolCallMiddleware());
 
-  // [4] LLM error handling + sandbox audit (shared base middlewares, mirror
-  // Python `_build_runtime_middlewares` tail order: DanglingToolCall →
-  // LLMErrorHandling → SandboxAudit → ToolErrorHandling). Without
+  // [4] LLM error handling (shared base middleware, mirrors Python
+  // `_build_runtime_middlewares` tail order: DanglingToolCall →
+  // LLMErrorHandling → Guardrail → SandboxAudit → ToolErrorHandling). Without
   // LLMErrorHandlingMiddleware, transient/unrecoverable LLM errors throw
   // out of the model node and surface as `status=failed` instead of being
   // retried or gracefully degraded to a fallback AIMessage.
-  chain.push(
-    llmErrorHandlingMiddleware({ appConfig: options.appConfig }),
-    sandboxAuditMiddleware(),
-  );
+  chain.push(llmErrorHandlingMiddleware({ appConfig: options.appConfig }));
+
+  // [4b] Guardrail — pre-tool-call authorization. Sub-agent bash calls are
+  // constrained by the same command-level policy as the lead agent.
+  const guardrail = createGuardrailMiddleware(options.appConfig.guardrails);
+  if (guardrail !== null) {
+    chain.push(guardrail);
+  }
+
+  chain.push(sandboxAuditMiddleware());
 
   // [5] Deferred tool filter (hide MCP schemas until promoted via tool_search).
   if (options.deferredSetup?.deferredNames?.size ?? 0 > 0) {

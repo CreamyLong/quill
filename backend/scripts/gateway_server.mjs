@@ -55,6 +55,8 @@ import { summarizationMiddleware } from "../dist/packages/harness/quill/agents/m
 import { setSandboxMiddlewareProvider } from "../dist/packages/harness/quill/agents/middlewares/builtin.js";
 import { guardrailMiddleware } from "../dist/packages/harness/quill/guardrails/middleware.js";
 import { AllowlistProvider } from "../dist/packages/harness/quill/guardrails/builtin.js";
+import { createGuardrailMiddleware } from "../dist/packages/harness/quill/guardrails/loader.js";
+import { FileScheduledTaskStore } from "../dist/packages/harness/quill/scheduling/index.js";
 import { buildTracingCallbacks } from "../dist/packages/harness/quill/tracing/factory.js";
 import { SubagentExecutor } from "../dist/packages/harness/quill/subagents/executor.js";
 import {
@@ -677,27 +679,46 @@ try {
 }
 
 // --- Guardrails: pre-tool-call authorization gate (features.guardrail slot) ---
-// Config-driven via the `guardrails` section of config.yaml. Uses the built-in
-// AllowlistProvider (allow/deny lists) by default. Enabled by default with a
-// safe denylist; set `guardrails.enabled: false` to turn it off.
+// Config-driven via the `guardrails` section of config.yaml.
+//   - If `provider.use` is set, the named GuardrailProvider is resolved (built-in
+//     CommandPolicyProvider / AllowlistProvider, or an external ESM provider),
+//     giving command-level (exec-policy style) allow/deny control.
+//   - Otherwise it falls back to the built-in AllowlistProvider with a safe
+//     default denylist.
+// Enabled by default with a safe denylist; set `guardrails.enabled: false` to turn it off.
 let guardrailFeature;
 {
   const gcfg = appConfig.guardrails ?? {};
   const enabled = gcfg.enabled !== false; // default ON
   if (enabled) {
-    const provider = gcfg.provider ?? {};
-    const pconf = provider.config ?? provider.params ?? provider ?? {};
-    // Read deniedTools from either camelCase or snake_case, and from either
-    // the provider root or provider.params (config.yaml uses params.denied_tools).
-    const deniedTools = pconf.deniedTools
-      ?? pconf.denied_tools
-      ?? ["bash"];
-    const allowedTools = pconf.allowedTools ?? pconf.allowed_tools; // undefined => allow all except denied
-    const authz = new AllowlistProvider({ allowedTools, deniedTools });
-    guardrailFeature = guardrailMiddleware(authz, { failClosed: gcfg.failClosed !== false });
-    console.log(
-      `[gateway] guardrails enabled (provider=allowlist, denied=[${deniedTools.join(", ")}]${allowedTools ? `, allowed=[${allowedTools.join(", ")}]` : ""})`,
-    );
+    const provider = gcfg.provider ?? null;
+    if (provider && provider.use) {
+      // Honour the configured provider (built-in or external) via the loader.
+      guardrailFeature = createGuardrailMiddleware({
+        enabled: true,
+        failClosed: gcfg.failClosed !== false,
+        passport: gcfg.passport ?? null,
+        provider,
+      });
+      if (guardrailFeature) {
+        console.log(`[gateway] guardrails enabled (provider=${provider.use})`);
+      } else {
+        console.warn(`[gateway] guardrails enabled but provider '${provider.use}' did not resolve; running without a guardrail gate`);
+      }
+    } else {
+      const pconf = provider?.config ?? provider?.params ?? provider ?? {};
+      // Read deniedTools from either camelCase or snake_case, and from either
+      // the provider root or provider.params (config.yaml uses params.denied_tools).
+      const deniedTools = pconf.deniedTools
+        ?? pconf.denied_tools
+        ?? ["bash"];
+      const allowedTools = pconf.allowedTools ?? pconf.allowed_tools; // undefined => allow all except denied
+      const authz = new AllowlistProvider({ allowedTools, deniedTools });
+      guardrailFeature = guardrailMiddleware(authz, { failClosed: gcfg.failClosed !== false });
+      console.log(
+        `[gateway] guardrails enabled (provider=allowlist, denied=[${deniedTools.join(", ")}]${allowedTools ? `, allowed=[${allowedTools.join(", ")}]` : ""})`,
+      );
+    }
   } else {
     console.log("[gateway] guardrails disabled (config)");
   }
@@ -851,6 +872,11 @@ const memoryStore = buildStore("memory store enabled (.scitops/memory.db)", () =
   createMemoryStore(path.resolve(QUILL_DIR, "memory.db")),
 );
 
+const scheduledTaskStore = buildStore(
+  "scheduled task store enabled (.scitops/scheduled_tasks.json)",
+  () => new FileScheduledTaskStore(path.resolve(QUILL_DIR, "scheduled_tasks.json")),
+);
+
 // --- Persistence ORM: initialize application schema ---
 // Schema includes users, threads_meta, runs, run_events, feedback, and
 // channel_connections. Ad-hoc stores remain functional during migration.
@@ -897,7 +923,7 @@ function buildStore(label, factory) {
   }
 }
 
-const { server, getThreadMetadata } = createGatewayServer({
+const { server, getThreadMetadata, stopScheduledTasks } = createGatewayServer({
   graph: buildGraphForContext,
   models: toGatewayModels(appConfig),
   modelLabel: modelConfig.name,
@@ -937,6 +963,7 @@ const { server, getThreadMetadata } = createGatewayServer({
     ? async (threadId, opts) => runRepository.aggregateTokensByThread(threadId, opts)
     : undefined,
   eventStore: gatewayEventStore,
+  scheduledTaskStore,
 });
 
 // Wire per-thread workspace_directory override resolution. When a thread's
@@ -968,6 +995,7 @@ server.listen(PORT, () => {
 // are flushed and WAL files are cleaned up.
 async function shutdown() {
   console.log("[gateway] shutting down...");
+  stopScheduledTasks?.();
   await new Promise((resolve) => server.close(resolve));
   if (closeStore) {
     try {

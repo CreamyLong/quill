@@ -73,6 +73,15 @@ import {
 } from "../runtime/events/store/base.js";
 import { MemoryRunEventStore } from "../runtime/events/store/memory.js";
 import { cancelChildren } from "../subagents/runtime/children.js";
+import {
+  ScheduledTaskScheduler,
+  computeNextRun,
+  isCronExpression,
+  type ScheduleSpec,
+  type ScheduledRunStatus,
+  type ScheduledTask,
+  type ScheduledTaskStore,
+} from "../scheduling/index.js";
 
 /** Minimal shape of the compiled LangGraph graph this server drives. */
 export interface RunnableGraph {
@@ -408,6 +417,14 @@ export interface GatewayDeps {
    * `JsonlRunEventStore` (or `DbRunEventStore`) for durability.
    */
   eventStore?: RunEventStore | null;
+  /**
+   * Durable store of scheduled-task definitions backing the
+   * `/scheduled-tasks` routes and the built-in tick loop. When absent the
+   * routes return 503 and no scheduler is started.
+   */
+  scheduledTaskStore?: ScheduledTaskStore | null;
+  /** Tick interval (ms) for the built-in scheduled-task scheduler. Default: 30_000. */
+  scheduledTaskTickMs?: number;
   logger?: (message: string) => void;
 }
 
@@ -620,12 +637,16 @@ function contentToText(content: unknown): string {
 export interface GatewayServerHandle {
   server: http.Server;
   getThreadMetadata: (threadId: string) => Record<string, unknown> | undefined;
+  /** Stop the built-in scheduled-task tick loop (no-op when no store was configured). */
+  stopScheduledTasks?: () => void;
 }
 
 export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
   const threads = new Map<string, ThreadRecord>();
   /** Active runs → their AbortController, for cancellation. */
   const activeRuns = new Map<string, AbortController>();
+  /** Task ids of scheduled tasks that currently have a run in flight. */
+  const scheduledInFlight = new Set<string>();
   /**
    * Effective run-event store. The launcher injects a durable
    * `JsonlRunEventStore`/`DbRunEventStore` via `deps.eventStore`; when absent we
@@ -1177,6 +1198,178 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
         .map(threadView);
       sendJson(req, res, 200, all);
       return;
+    }
+
+    // --- Scheduled tasks (cron / interval-driven agent runs) ---
+    // GET /scheduled-tasks — list all scheduled tasks
+    if (p === "/scheduled-tasks" && method === "GET") {
+      if (!deps.scheduledTaskStore) {
+        sendJson(req, res, 503, { detail: "Scheduled task store not available" });
+        return;
+      }
+      const data = deps.scheduledTaskStore
+        .list()
+        .sort((a, b) => b.created_at.localeCompare(a.created_at));
+      sendJson(req, res, 200, { data });
+      return;
+    }
+
+    // POST /scheduled-tasks — create a scheduled task
+    if (p === "/scheduled-tasks" && method === "POST") {
+      if (!deps.scheduledTaskStore) {
+        sendJson(req, res, 503, { detail: "Scheduled task store not available" });
+        return;
+      }
+      const body = await readJson(req);
+      let schedule: ScheduleSpec;
+      try {
+        schedule = parseScheduleInput(body.schedule);
+      } catch (err) {
+        sendJson(req, res, 400, { detail: err instanceof Error ? err.message : "invalid schedule" });
+        return;
+      }
+      const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : "Scheduled task";
+      const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+      if (!prompt) {
+        sendJson(req, res, 400, { detail: "prompt is required" });
+        return;
+      }
+      const threadId =
+        typeof body.thread_id === "string" && body.thread_id.trim() ? body.thread_id.trim() : null;
+      const enabled = body.enabled !== false;
+      const task: ScheduledTask = {
+        id: randomUUID(),
+        name,
+        prompt,
+        schedule,
+        thread_id: threadId,
+        enabled,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        last_run_at: null,
+        last_status: null,
+        last_run_id: null,
+        next_run_at: null,
+        run_count: 0,
+      };
+      task.next_run_at = computeNextRun(task, new Date());
+      deps.scheduledTaskStore.save(task);
+      sendJson(req, res, 201, task);
+      return;
+    }
+
+    // /scheduled-tasks/:id  (+ /run for manual trigger)
+    const scheduledTaskMatch = p.match(/^\/scheduled-tasks\/([^/]+)(\/run)?$/);
+    if (scheduledTaskMatch) {
+      const store = deps.scheduledTaskStore;
+      if (!store) {
+        sendJson(req, res, 503, { detail: "Scheduled task store not available" });
+        return;
+      }
+      const taskId = decodeURIComponent(scheduledTaskMatch[1]);
+
+      // GET /scheduled-tasks/:id
+      if (method === "GET") {
+        const task = store.get(taskId);
+        if (!task) {
+          sendJson(req, res, 404, { detail: "Scheduled task not found" });
+          return;
+        }
+        sendJson(req, res, 200, task);
+        return;
+      }
+
+      // PUT /scheduled-tasks/:id — partial update (name / prompt / schedule / enabled / thread_id)
+      if (method === "PUT") {
+        const task = store.get(taskId);
+        if (!task) {
+          sendJson(req, res, 404, { detail: "Scheduled task not found" });
+          return;
+        }
+        const body = await readJson(req);
+        const updated: ScheduledTask = { ...task };
+        let scheduleChanged = false;
+        if (typeof body.name === "string" && body.name.trim()) updated.name = body.name.trim();
+        if (typeof body.prompt === "string" && body.prompt.trim()) updated.prompt = body.prompt.trim();
+        if (body.schedule !== undefined) {
+          try {
+            updated.schedule = parseScheduleInput(body.schedule);
+            scheduleChanged = true;
+          } catch (err) {
+            sendJson(req, res, 400, {
+              detail: err instanceof Error ? err.message : "invalid schedule",
+            });
+            return;
+          }
+        }
+        if (body.thread_id !== undefined) {
+          updated.thread_id =
+            typeof body.thread_id === "string" && body.thread_id.trim() ? body.thread_id.trim() : null;
+        }
+        if (typeof body.enabled === "boolean") updated.enabled = body.enabled;
+        updated.updated_at = nowIso();
+        if (!updated.enabled) {
+          updated.next_run_at = null;
+        } else if (scheduleChanged || updated.next_run_at === null) {
+          updated.next_run_at = computeNextRun(updated, new Date());
+        }
+        store.save(updated);
+        sendJson(req, res, 200, updated);
+        return;
+      }
+
+      // DELETE /scheduled-tasks/:id
+      if (method === "DELETE") {
+        const ok = store.delete(taskId);
+        if (!ok) {
+          sendJson(req, res, 404, { detail: "Scheduled task not found" });
+          return;
+        }
+        sendJson(req, res, 200, { success: true });
+        return;
+      }
+
+      // POST /scheduled-tasks/:id/run — fire now
+      if (method === "POST" && scheduledTaskMatch[2] === "/run") {
+        const task = store.get(taskId);
+        if (!task) {
+          sendJson(req, res, 404, { detail: "Scheduled task not found" });
+          return;
+        }
+        if (scheduledInFlight.has(taskId)) {
+          sendJson(req, res, 409, { detail: "A run for this task is already in flight" });
+          return;
+        }
+        if (task.thread_id && threads.get(task.thread_id)?.status === "busy") {
+          sendJson(req, res, 409, { detail: "The pinned thread is busy with another run" });
+          return;
+        }
+        try {
+          const handle = await startScheduledRun(task);
+          // Fire-and-forget bookkeeping for the manual path; the scheduler's
+          // own tick records outcomes for scheduler-fired runs.
+          void handle.promise
+            .then((status) => recordScheduledRunOutcome(taskId, status, handle.runId))
+            .catch((err) => {
+              log(
+                deps,
+                `[gateway] manual scheduled run bookkeeping failed: ${
+                  err instanceof Error ? err.message : String(err)
+                }`,
+              );
+            });
+          sendJson(req, res, 202, {
+            thread_id: handle.threadId,
+            run_id: handle.runId,
+            status: "running",
+          });
+        } catch (err) {
+          sendJson(req, res, 409, {
+            detail: err instanceof Error ? err.message : "Failed to start scheduled run",
+          });
+        }
+        return;
+      }
     }
 
     // --- Per-thread routes ---
@@ -2246,6 +2439,275 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     }
   }
 
+  // ── Scheduled runs (cron/interval-driven agent runs) ─────────────────────
+
+  /** Handle returned by startScheduledRun. */
+  interface ScheduledRunHandle {
+    threadId: string;
+    runId: string;
+    /** Resolves with the run's terminal status. */
+    promise: Promise<ScheduledRunStatus>;
+  }
+
+  /**
+   * Parse a raw schedule object from the request body into a validated
+   * {@link ScheduleSpec}. Tolerates snake_case / camelCase keys and throws
+   * a descriptive Error when the input is malformed.
+   */
+  function parseScheduleInput(raw: unknown): ScheduleSpec {
+    if (raw == null || typeof raw !== "object") {
+      throw new Error("schedule must be an object with kind 'interval' or 'cron'");
+    }
+    const s = raw as Record<string, unknown>;
+    if (s.kind === "interval") {
+      const everySeconds = Number(s.every_seconds ?? s.everySeconds ?? 0);
+      if (!Number.isFinite(everySeconds) || everySeconds < 1) {
+        throw new Error("schedule.every_seconds must be a number >= 1");
+      }
+      return { kind: "interval", everySeconds: Math.floor(everySeconds) };
+    }
+    if (s.kind === "cron") {
+      const expression = typeof s.expression === "string" ? s.expression.trim() : "";
+      if (!isCronExpression(expression)) {
+        throw new Error(`invalid cron expression: ${expression || "(empty)"}`);
+      }
+      return { kind: "cron", expression };
+    }
+    throw new Error("schedule.kind must be 'interval' or 'cron'");
+  }
+
+  /**
+   * Start a run for a scheduled task in-process (no HTTP client involved).
+   *
+   * Reuses the same thread/run bookkeeping as `handleRunStream`: creates or
+   * reuses the target thread, registers the run in `activeRuns` so the cancel
+   * routes work, and streams the graph to completion. No SSE events are
+   * written (there is no client); thread state is persisted the same way.
+   *
+   * @throws {Error} When the task already has a scheduled run in flight.
+   */
+  async function startScheduledRun(task: ScheduledTask): Promise<ScheduledRunHandle> {
+    if (scheduledInFlight.has(task.id)) {
+      throw new Error(`Scheduled task '${task.id}' already has a run in flight`);
+    }
+    scheduledInFlight.add(task.id);
+
+    const threadId = task.thread_id ?? randomUUID();
+    const isPinned = task.thread_id !== null;
+    let t: ThreadRecord;
+    try {
+      t = getOrCreateThread(
+        threadId,
+        isPinned ? undefined : { source: "scheduled", scheduled_task_id: task.id },
+      );
+    } catch (err) {
+      scheduledInFlight.delete(task.id);
+      throw err;
+    }
+
+    const runId = randomUUID();
+
+    // A pinned thread already busy with another run → skip rather than run
+    // two concurrent graphs against the same checkpointer.
+    if (t.status === "busy") {
+      scheduledInFlight.delete(task.id);
+      return { threadId, runId, promise: Promise.resolve<ScheduledRunStatus>("skipped") };
+    }
+
+    const run: RunRecord = {
+      run_id: runId,
+      thread_id: threadId,
+      status: "running",
+      created_at: nowIso(),
+      updated_at: nowIso(),
+      metadata: {
+        source: "scheduled",
+        scheduled_task_id: task.id,
+        scheduled_task_name: task.name,
+      },
+      messages: [],
+    };
+    t.runs.set(runId, run);
+    t.status = "busy";
+
+    const controller = new AbortController();
+    activeRuns.set(runId, controller);
+
+    const userCtxToken = setCurrentUser(DEFAULT_USER);
+    const promise = (async (): Promise<ScheduledRunStatus> => {
+      try {
+        // Dedupe the input message against the checkpointer state, the same
+        // way handleRunStream does, so a pinned thread does not re-send a
+        // prompt that is already in its checkpoint.
+        let existingIds = new Set<string>();
+        try {
+          const graphForState = typeof deps.graph === "function" ? deps.graph({}) : deps.graph;
+          const prior = await graphForState.getState({ configurable: { thread_id: threadId } });
+          const priorMsgs = prior?.values?.messages;
+          if (Array.isArray(priorMsgs)) {
+            for (const m of priorMsgs) {
+              const id = (m as { id?: unknown })?.id;
+              if (typeof id === "string") existingIds.add(id);
+            }
+          }
+        } catch {
+          existingIds = new Set();
+        }
+
+        const toSend = [new HumanMessage({ content: task.prompt, id: runId })];
+        const context: Record<string, unknown> = {
+          user_id: DEFAULT_USER.id,
+          source: "scheduled",
+          scheduled_task_id: task.id,
+          scheduled_task_name: task.name,
+        };
+
+        const graphForRun =
+          typeof deps.graph === "function" ? deps.graph(context) : deps.graph;
+        const iterable = await graphForRun.stream(
+          { messages: toSend },
+          {
+            configurable: { thread_id: threadId, ...context },
+            context,
+            streamMode: ["values"],
+            metadata: { thread_id: threadId, run_id: runId, source: "scheduled" },
+            ...(deps.runCallbacks && deps.runCallbacks.length > 0
+              ? { callbacks: deps.runCallbacks }
+              : {}),
+            recursionLimit: 100,
+          },
+        );
+
+        let finalValues: Record<string, unknown> | undefined;
+        for await (const chunk of iterable as AsyncIterable<unknown>) {
+          if (controller.signal.aborted) {
+            throw new Error("Run aborted by client");
+          }
+          if (
+            Array.isArray(chunk) &&
+            chunk.length === 2 &&
+            typeof chunk[0] === "string" &&
+            KNOWN_STREAM_MODES.has(chunk[0])
+          ) {
+            const [mode, data] = chunk as [string, unknown];
+            if (mode === "values") {
+              finalValues = data as Record<string, unknown>;
+            }
+          } else {
+            finalValues = chunk as Record<string, unknown>;
+          }
+        }
+
+        if (finalValues && Array.isArray(finalValues.messages)) {
+          t.values = { ...t.values, ...finalValues };
+          if (!t.values.title) {
+            t.values.title = task.prompt.slice(0, 80);
+          }
+          const ts = nowIso();
+          let seq = 0;
+          for (const raw of finalValues.messages as MessageLike[]) {
+            const msg = serializeMessage(raw);
+            const id = typeof msg.id === "string" ? msg.id : undefined;
+            if (id && existingIds.has(id)) continue;
+            const caller = msg.type === "system" ? "middleware:system" : "lead_agent";
+            run.messages.push({
+              run_id: runId,
+              seq: seq++,
+              content: msg,
+              metadata: { caller },
+              created_at: ts,
+            });
+          }
+        }
+        t.updated_at = nowIso();
+        t.state_updated_at = t.updated_at;
+        t.status = "idle";
+        run.status = "success";
+        run.updated_at = nowIso();
+        activeRuns.delete(runId);
+        persistThread(t);
+        return "success";
+      } catch (err) {
+        activeRuns.delete(runId);
+        const aborted =
+          controller.signal.aborted ||
+          (err instanceof Error &&
+            (err.name === "AbortError" || /abort/i.test(err.message)));
+        if (aborted) {
+          run.status = "cancelled";
+          t.status = "idle";
+          run.updated_at = nowIso();
+          try {
+            const graphForState =
+              typeof deps.graph === "function" ? deps.graph({}) : deps.graph;
+            const partial = await graphForState.getState({
+              configurable: { thread_id: threadId },
+            });
+            if (partial?.values && Array.isArray(partial.values.messages)) {
+              t.values = { ...t.values, ...partial.values };
+            }
+          } catch {
+            /* ignore */
+          }
+          persistThread(t);
+          log(deps, `[gateway] scheduled run ${runId} (task ${task.id}) cancelled`);
+          return "cancelled";
+        }
+        run.status = "error";
+        t.status = "error";
+        run.updated_at = nowIso();
+        persistThread(t);
+        log(
+          deps,
+          `[gateway] scheduled run ${runId} (task ${task.id}) failed: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+        return "error";
+      } finally {
+        scheduledInFlight.delete(task.id);
+        resetCurrentUser(userCtxToken);
+      }
+    })();
+    return { threadId, runId, promise };
+  }
+
+  /**
+   * Record the outcome of a manually fired scheduled run (POST
+   * /scheduled-tasks/{id}/run). Scheduler-fired runs are recorded by the
+   * scheduler's own bookkeeping instead.
+   */
+  function recordScheduledRunOutcome(
+    taskId: string,
+    status: ScheduledRunStatus,
+    runId: string | null,
+  ): void {
+    const store = deps.scheduledTaskStore;
+    if (!store) return;
+    const task = store.get(taskId);
+    if (!task) return;
+    const now = new Date();
+    const updated: ScheduledTask = {
+      ...task,
+      last_run_at: now.toISOString(),
+      last_status: status,
+      last_run_id: status === "skipped" ? task.last_run_id : runId,
+      updated_at: now.toISOString(),
+      run_count: task.run_count + (status === "skipped" ? 0 : 1),
+    };
+    updated.next_run_at = computeNextRun(updated, now);
+    try {
+      store.save(updated);
+    } catch (err) {
+      log(
+        deps,
+        `[gateway] failed to record scheduled run outcome: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+
   // --- Regenerate: reset thread to before the target assistant message ---
   async function handleRegeneratePrepare(
     req: http.IncomingMessage,
@@ -2678,7 +3140,26 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     }
   }
 
-  return { server, getThreadMetadata };
+  // ── Scheduled-task tick loop ──────────────────────────────────────────────
+  const scheduledTaskScheduler = deps.scheduledTaskStore
+    ? new ScheduledTaskScheduler({
+        store: deps.scheduledTaskStore,
+        tickMs: deps.scheduledTaskTickMs,
+        logger: (m) => log(deps, m),
+        fireRun: async (task) => {
+          const handle = await startScheduledRun(task);
+          const status = await handle.promise;
+          return { status, threadId: handle.threadId, runId: handle.runId };
+        },
+      })
+    : null;
+  scheduledTaskScheduler?.start();
+
+  return {
+    server,
+    getThreadMetadata,
+    stopScheduledTasks: () => scheduledTaskScheduler?.stop(),
+  };
 }
 
 function buildContentDisposition(filePath: string): string {
