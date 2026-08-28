@@ -1,4 +1,4 @@
-// SciTops Desktop — Tauri 2 main entry point.
+// Quill Desktop — Tauri 2 main entry point.
 //
 // Bridges the Next.js frontend to native filesystem operations:
 //   • pick_folder      → native folder picker → absolute path
@@ -10,8 +10,6 @@
 // Prevents additional console window on Windows in release.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod fs_bridge;
-
 fn main() {
-    scitops_desktop_lib::run()
+    quill_desktop_lib::run()
 }

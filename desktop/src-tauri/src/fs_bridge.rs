@@ -17,6 +17,7 @@ use tauri::command;
 
 const MAX_DEPTH: usize = 6;
 const MAX_ENTRIES: usize = 2000;
+const MAX_SEARCH_RESULTS: usize = 500;
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
@@ -48,6 +49,30 @@ pub struct ValidateResult {
     pub readable: bool,
     pub writable: bool,
     pub error: Option<String>,
+}
+
+/// File metadata returned by `get_file_info`.
+#[derive(Debug, Serialize)]
+pub struct FileInfo {
+    pub exists: bool,
+    pub is_dir: bool,
+    pub is_file: bool,
+    pub is_symlink: bool,
+    pub size: u64,
+    pub modified: Option<u64>,
+    pub created: Option<u64>,
+    pub readonly: bool,
+    pub absolute_path: String,
+    pub extension: Option<String>,
+}
+
+/// Search result entry for `search_files`.
+#[derive(Debug, Serialize)]
+pub struct SearchHit {
+    pub path: String,
+    pub name: String,
+    pub is_dir: bool,
+    pub size: u64,
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -127,9 +152,205 @@ pub async fn read_file_text(path: String) -> Result<String, String> {
     fs::read_to_string(path).map_err(|e| e.to_string())
 }
 
+/// Write UTF-8 text to a file. Creates parent directories when missing.
+#[command]
+pub async fn write_file_text(path: String, content: String, append: Option<bool>) -> Result<(), String> {
+    let p = PathBuf::from(&path);
+    if let Some(parent) = p.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+    }
+    if append.unwrap_or(false) {
+        use std::io::Write;
+        let mut f = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&p)
+            .map_err(|e| e.to_string())?;
+        f.write_all(content.as_bytes()).map_err(|e| e.to_string())
+    } else {
+        fs::write(&p, content).map_err(|e| e.to_string())
+    }
+}
+
+/// Rename (move) a file or directory.
+#[command]
+pub async fn rename_path(from: String, to: String) -> Result<(), String> {
+    let src = PathBuf::from(&from);
+    if !src.exists() {
+        return Err(format!("Source does not exist: {from}"));
+    }
+    let dst = PathBuf::from(&to);
+    // Refuse to overwrite an existing destination — the caller decides how to
+    // handle collisions instead of the shell silently clobbering data.
+    if dst.exists() {
+        return Err(format!("Destination already exists: {to}"));
+    }
+    if let Some(parent) = dst.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+    }
+    fs::rename(&src, &dst).map_err(|e| e.to_string())
+}
+
+/// Delete a file or a directory (recursively for directories).
+#[command]
+pub async fn delete_path(path: String) -> Result<(), String> {
+    let p = PathBuf::from(&path);
+    if !p.exists() {
+        return Err(format!("Path does not exist: {path}"));
+    }
+    if p.is_dir() {
+        fs::remove_dir_all(&p).map_err(|e| e.to_string())
+    } else {
+        fs::remove_file(&p).map_err(|e| e.to_string())
+    }
+}
+
+/// Create a directory, including any missing parent directories.
+#[command]
+pub async fn create_directory(path: String) -> Result<(), String> {
+    fs::create_dir_all(&path).map_err(|e| e.to_string())
+}
+
+/// Read metadata for a file or directory.
+#[command]
+pub async fn get_file_info(path: String) -> FileInfo {
+    let p = PathBuf::from(&path);
+    let resolved = p.canonicalize().unwrap_or_else(|_| p.clone());
+    let abs = resolved.to_string_lossy().to_string();
+    match fs::symlink_metadata(&resolved) {
+        Ok(meta) => {
+            let file_type = meta.file_type();
+            let file_meta = if file_type.is_symlink() {
+                fs::metadata(&resolved).ok()
+            } else {
+                Some(meta.clone())
+            };
+            let file_meta = file_meta.unwrap_or(meta);
+            FileInfo {
+                exists: true,
+                is_dir: file_meta.is_dir(),
+                is_file: file_meta.is_file(),
+                is_symlink: file_type.is_symlink(),
+                size: file_meta.len(),
+                modified: unix_secs(file_meta.modified().ok()),
+                created: unix_secs(file_meta.created().ok()),
+                readonly: file_meta.permissions().readonly(),
+                absolute_path: abs,
+                extension: resolved
+                    .extension()
+                    .map(|e| e.to_string_lossy().to_string()),
+            }
+        }
+        Err(_) => FileInfo {
+            exists: false,
+            is_dir: false,
+            is_file: false,
+            is_symlink: false,
+            size: 0,
+            modified: None,
+            created: None,
+            readonly: false,
+            absolute_path: abs,
+            extension: resolved
+                .extension()
+                .map(|e| e.to_string_lossy().to_string()),
+        },
+    }
+}
+
+/// Search files under `root` whose file name matches a glob-style pattern
+/// (`*` and `?` wildcards, case-insensitive). Results are capped.
+#[command]
+pub async fn search_files(root: String, pattern: String) -> Result<Vec<SearchHit>, String> {
+    let root = PathBuf::from(&root);
+    if !root.is_dir() {
+        return Err(format!("Not a directory: {}", root.display()));
+    }
+    if pattern.trim().is_empty() {
+        return Err("Pattern must not be empty".to_string());
+    }
+    let needle = pattern.to_lowercase();
+    let mut hits: Vec<SearchHit> = Vec::new();
+    for entry in WalkDir::new(&root)
+        .max_depth(MAX_DEPTH + 4)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| !should_ignore(e.path()))
+    {
+        if hits.len() >= MAX_SEARCH_RESULTS {
+            break;
+        }
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_lowercase();
+        if !glob_match(&name, &needle) {
+            continue;
+        }
+        if path == root {
+            continue;
+        }
+        let is_dir = entry.file_type().is_dir();
+        let size = if is_dir {
+            0
+        } else {
+            entry.metadata().map(|m| m.len()).unwrap_or(0)
+        };
+        hits.push(SearchHit {
+            path: path.to_string_lossy().to_string(),
+            name: entry.file_name().to_string_lossy().to_string(),
+            is_dir,
+            size,
+        });
+    }
+    Ok(hits)
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
+
+fn unix_secs(time: Option<std::time::SystemTime>) -> Option<u64> {
+    time.and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+}
+
+/// Case-insensitive glob matching supporting `*` (any sequence) and
+/// `?` (any single char). Everything else is a literal match.
+fn glob_match(name: &str, pattern: &str) -> bool {
+    // Iterative two-pointer glob to avoid deep recursion on `*`-heavy
+    // patterns like `*a*a*a*`.
+    let s: Vec<char> = name.chars().collect();
+    let p: Vec<char> = pattern.chars().collect();
+    let (mut si, mut pi) = (0usize, 0usize);
+    let (mut star_p, mut star_s) = (usize::MAX, 0usize);
+    while si < s.len() {
+        if pi < p.len() && (p[pi] == '?' || p[pi] == s[si]) {
+            si += 1;
+            pi += 1;
+        } else if pi < p.len() && p[pi] == '*' {
+            star_p = pi;
+            star_s = si;
+            pi += 1;
+        } else if star_p != usize::MAX {
+            pi = star_p + 1;
+            star_s += 1;
+            si = star_s;
+        } else {
+            return false;
+        }
+    }
+    while pi < p.len() && p[pi] == '*' {
+        pi += 1;
+    }
+    pi == p.len()
+}
 
 fn walk_dir(root: &Path, depth: usize) -> anyhow::Result<FsNode> {
     let mut entries: Vec<_> = fs::read_dir(root)

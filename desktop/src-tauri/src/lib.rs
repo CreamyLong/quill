@@ -14,6 +14,12 @@ pub fn run() {
             fs_bridge::list_tree,
             fs_bridge::open_in_manager,
             fs_bridge::read_file_text,
+            fs_bridge::write_file_text,
+            fs_bridge::rename_path,
+            fs_bridge::delete_path,
+            fs_bridge::create_directory,
+            fs_bridge::get_file_info,
+            fs_bridge::search_files,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
