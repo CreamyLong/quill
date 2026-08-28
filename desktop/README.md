@@ -15,18 +15,55 @@ filesystem operations on the host.
 │                  │ invoke("command", args)       │
 │  ┌───────────────▼───────────────────────────┐  │
 │  │  Rust Backend (src-tauri/)                │  │
-│  │  • pick_folder()       → native dialog     │  │
-│  │  • validate_path()     → absolute path     │  │
-│  │  • list_tree()         → recursive walk    │  │
-│  │  • open_in_manager()   → Finder/Explorer   │  │
-│  │  • read_file() / write_file() / run_cmd()  │  │
+│  │  fs_bridge.rs      — file CRUD + search    │  │
+│  │  system_bridge.rs  — clipboard/notify/win  │  │
+│  │  sync_bridge.rs    — workspace sync        │  │
 │  └───────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────┘
 ```
 
 The existing TypeScript backend (`backend/`) is still used for the agent runtime
 (Gateway, LangGraph, subagents). Tauri embeds or proxies to it. The Rust layer
-*only* handles filesystem operations the browser cannot.
+*only* handles filesystem operations and system integration the browser cannot.
+
+## Command surface
+
+### `fs_bridge.rs` — file operations
+| Command | Purpose |
+| --- | --- |
+| `pick_folder_blocking` | Native folder picker → absolute path |
+| `validate_path` | Check absolute path exists / readable / writable |
+| `list_tree` | Recursive directory walk (depth 6, 2000 entries) |
+| `open_in_manager` | Reveal in Finder / Explorer / Nautilus |
+| `read_file_text` / `write_file_text` | UTF-8 text I/O (write auto-creates parents, supports append) |
+| `rename_path` | Move/rename (refuses to overwrite destination) |
+| `delete_path` | Delete file, or directory recursively |
+| `create_directory` | `mkdir -p` semantics |
+| `get_file_info` | Metadata: size/type/timestamps/readonly/symlink |
+| `search_files` | Case-insensitive glob (`*`/`?`) walk, capped at 500 hits |
+
+### `system_bridge.rs` — system integration
+| Command | Purpose |
+| --- | --- |
+| `get_clipboard_text` / `set_clipboard_text` | Text clipboard |
+| `get_clipboard_image_base64` | Clipboard image → base64 PNG |
+| `show_notification` | System notification (UNUserNotificationCenter / Windows toast / libnotify) |
+| `read_system_info` | OS, kernel, arch, memory, CPU snapshot |
+| `set_window_always_on_top` / `minimize_window` / `toggle_maximize_window` | Window state |
+| `set_window_size` / `center_window` | Window geometry |
+| `hide_window` / `show_window` | Tray-style background operation |
+
+### `sync_bridge.rs` — workspace sync (OpenWork desktop-cloud-sync pattern)
+| Command | Purpose |
+| --- | --- |
+| `sync_workspace(local_path, gateway_url, token)` | Scan → manifest diff → upload changed files |
+| `sync_status` | Snapshot of current sync state |
+| `cancel_sync` | Cancel flag checked between uploads |
+
+Events: `sync-progress` and `sync-done` carry a `SyncStatus` snapshot
+(`phase`: `scanning → diffing → uploading → done/failed/cancelled`).
+Server-side contract: `POST /api/desktop/sync/manifest` (manifest in,
+changed list out) and `POST /api/desktop/sync/file` (multipart upload).
 
 ## Prerequisites
 
