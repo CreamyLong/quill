@@ -1,6 +1,7 @@
 // lib.rs — Tauri builder + command registration.
 
 mod fs_bridge;
+mod sync_bridge;
 mod system_bridge;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -35,6 +36,9 @@ pub fn run() {
             system_bridge::center_window,
             system_bridge::hide_window,
             system_bridge::show_window,
+            sync_bridge::sync_workspace,
+            sync_bridge::sync_status,
+            sync_bridge::cancel_sync,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
