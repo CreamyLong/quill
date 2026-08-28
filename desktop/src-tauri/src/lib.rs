@@ -28,6 +28,13 @@ pub fn run() {
             system_bridge::get_clipboard_image_base64,
             system_bridge::show_notification,
             system_bridge::read_system_info,
+            system_bridge::set_window_always_on_top,
+            system_bridge::minimize_window,
+            system_bridge::toggle_maximize_window,
+            system_bridge::set_window_size,
+            system_bridge::center_window,
+            system_bridge::hide_window,
+            system_bridge::show_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

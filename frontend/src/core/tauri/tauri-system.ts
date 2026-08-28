@@ -83,3 +83,49 @@ export async function readSystemInfo(): Promise<HostSystemInfo> {
   requireTauri("readSystemInfo");
   return invoke<HostSystemInfo>("read_system_info");
 }
+
+// ────────────────────────────────────────────────────────────────────────
+// Window management
+// ────────────────────────────────────────────────────────────────────────
+
+/** Pin/unpin the main window above all others. */
+export async function setWindowAlwaysOnTop(flag: boolean): Promise<void> {
+  requireTauri("setWindowAlwaysOnTop");
+  await invoke("set_window_always_on_top", { flag });
+}
+
+/** Minimize the main window. */
+export async function minimizeWindow(): Promise<void> {
+  requireTauri("minimizeWindow");
+  await invoke("minimize_window");
+}
+
+/** Toggle between maximized and restored. */
+export async function toggleMaximizeWindow(): Promise<void> {
+  requireTauri("toggleMaximizeWindow");
+  await invoke("toggle_maximize_window");
+}
+
+/** Resize the main window (logical pixels). */
+export async function setWindowSize(width: number, height: number): Promise<void> {
+  requireTauri("setWindowSize");
+  await invoke("set_window_size", { width, height });
+}
+
+/** Center the main window on the current monitor. */
+export async function centerWindow(): Promise<void> {
+  requireTauri("centerWindow");
+  await invoke("center_window");
+}
+
+/** Hide the main window (process keeps running). */
+export async function hideWindow(): Promise<void> {
+  requireTauri("hideWindow");
+  await invoke("hide_window");
+}
+
+/** Show (and focus) the main window after a hide. */
+export async function showWindow(): Promise<void> {
+  requireTauri("showWindow");
+  await invoke("show_window");
+}

@@ -139,3 +139,74 @@ pub async fn read_system_info() -> Result<SystemInfo, String> {
     .await
     .map_err(|e| e.to_string())?
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Window management
+// ─────────────────────────────────────────────────────────────────────────
+
+use tauri::Manager;
+
+fn main_window(app: &tauri::AppHandle) -> Result<tauri::WebviewWindow, String> {
+    app.get_webview_window("main")
+        .ok_or_else(|| "main window not found".to_string())
+}
+
+/// Pin/unpin the main window above all others.
+#[command]
+pub async fn set_window_always_on_top(
+    app: tauri::AppHandle,
+    flag: bool,
+) -> Result<(), String> {
+    main_window(&app)?
+        .set_always_on_top(flag)
+        .map_err(|e| e.to_string())
+}
+
+/// Minimize the main window.
+#[command]
+pub async fn minimize_window(app: tauri::AppHandle) -> Result<(), String> {
+    main_window(&app)?.minimize().map_err(|e| e.to_string())
+}
+
+/// Toggle between maximized and restored.
+#[command]
+pub async fn toggle_maximize_window(app: tauri::AppHandle) -> Result<(), String> {
+    let window = main_window(&app)?;
+    if window.is_maximized().map_err(|e| e.to_string())? {
+        window.unmaximize().map_err(|e| e.to_string())
+    } else {
+        window.maximize().map_err(|e| e.to_string())
+    }
+}
+
+/// Resize the main window (logical pixels; DPI is handled by tao).
+#[command]
+pub async fn set_window_size(
+    app: tauri::AppHandle,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    main_window(&app)?
+        .set_size(tauri::LogicalSize::new(width, height))
+        .map_err(|e| e.to_string())
+}
+
+/// Center the main window on the current monitor.
+#[command]
+pub async fn center_window(app: tauri::AppHandle) -> Result<(), String> {
+    main_window(&app)?.center().map_err(|e| e.to_string())
+}
+
+/// Hide the main window (keeps the process running; pair with a tray icon).
+#[command]
+pub async fn hide_window(app: tauri::AppHandle) -> Result<(), String> {
+    main_window(&app)?.hide().map_err(|e| e.to_string())
+}
+
+/// Show (and focus) the main window after a hide.
+#[command]
+pub async fn show_window(app: tauri::AppHandle) -> Result<(), String> {
+    let window = main_window(&app)?;
+    window.show().map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())
+}
