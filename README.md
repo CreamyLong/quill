@@ -255,6 +255,23 @@ make dev          # start services, open http://localhost:2126
 docker compose up -d
 ```
 
+### Desktop App (Tauri 2)
+
+```bash
+# One-command desktop (builds frontend, starts Gateway, launches Tauri)
+make desktop
+
+# Or manually:
+cd desktop
+npm install
+npm run tauri dev    # first build ~3-5 min, then incremental
+
+# Production build
+npm run tauri build  # → .dmg/.msi/.AppImage
+```
+
+The desktop app auto-launches the Gateway, provides native filesystem access, system tray, workspace sync, and auto-updates. See [desktop/README.md](desktop/README.md) for full documentation.
+
 ---
 
 ## 🛠️ Tech Stack

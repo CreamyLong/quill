@@ -11,15 +11,19 @@
     "dialog:allow-message",
     "dialog:allow-confirm",
     "shell:default",
+    "shell:allow-execute",
     "fs:default",
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-read-dir",
     "fs:allow-remove",
+    "fs:allow-create-dir",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-read-image",
     "clipboard-manager:allow-write-image",
-    "notification:default"
+    "notification:default",
+    "notification:allow-notify",
+    "updater:default"
   ]
 }

@@ -950,6 +950,11 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
       if (await handleMemory(req, res, p, method)) return;
     }
 
+    // --- Desktop Sync ---
+    if (p.startsWith("/desktop/sync/")) {
+      if (await handleDesktopSync(req, res, p, method, url)) return;
+    }
+
     // --- MCP / Channels / Suggestions ---
     if (p === "/mcp/config" && method === "GET") {
       const cfg = loadExtensionsConfigView();
@@ -1763,6 +1768,140 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     }
 
     sendJson(req, res, 404, { detail: "Not found" });
+  }
+
+  // --- Desktop Sync routes (Tauri desktop shell ⇄ Gateway) ---
+
+  // In-memory file registry for sync (path → { size, modified, hash }).
+  const _syncRegistry = new Map<string, { size: number; modified: number; hash: string }>();
+
+  const SYNC_CONFIG = {
+    enabled: true,
+    maxFileSize: 50 * 1024 * 1024, // 50MB
+    maxTotalFiles: 10000,
+    allowedPatterns: ["*"] as string[],
+    blockedPatterns: [
+      ".git/**", "node_modules/**", ".next/**", "target/**",
+      "*.tmp", "*.log", ".DS_Store", "Thumbs.db",
+    ],
+  };
+
+  function isSyncBlocked(relPath: string): boolean {
+    const normalized = relPath.replace(/\\/g, "/");
+    for (const pattern of SYNC_CONFIG.blockedPatterns) {
+      if (pattern.endsWith("/**")) {
+        if (normalized.startsWith(pattern.slice(0, -3))) return true;
+      } else if (pattern.includes("*")) {
+        const regexStr = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*");
+        if (new RegExp(`^${regexStr}$`).test(normalized)) return true;
+      } else if (normalized === pattern) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async function handleDesktopSync(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    p: string,
+    method: string,
+    url: URL,
+  ): Promise<boolean> {
+    // POST /desktop/sync/manifest — submit manifest, get changed list
+    if (p === "/desktop/sync/manifest" && method === "POST") {
+      try {
+        const body = (await readJson(req)) as { files?: Array<{ path: string; size: number; modified: number }> };
+        if (!body || !Array.isArray(body.files)) {
+          sendJson(req, res, 400, { error: "Invalid manifest: files array required" });
+          return true;
+        }
+        const changed: string[] = [];
+        for (const entry of body.files) {
+          if (isSyncBlocked(entry.path)) continue;
+          const existing = _syncRegistry.get(entry.path);
+          if (!existing || existing.size !== entry.size || existing.modified !== entry.modified) {
+            changed.push(entry.path);
+          }
+        }
+        sendJson(req, res, 200, { changed, server_total: _syncRegistry.size });
+      } catch (err) {
+        console.error("[desktop-sync] Manifest error:", err);
+        sendJson(req, res, 500, { error: "Internal server error" });
+      }
+      return true;
+    }
+
+    // POST /desktop/sync/file — upload a single file (multipart)
+    if (p === "/desktop/sync/file" && method === "POST") {
+      try {
+        // Parse multipart manually (no multer dependency in this module).
+        const contentType = req.headers["content-type"] ?? "";
+        if (!contentType.includes("multipart/form-data")) {
+          sendJson(req, res, 400, { error: "Expected multipart/form-data" });
+          return true;
+        }
+        // For now, accept the file and register it. Full multipart parsing
+        // would require busboy (already imported for uploads).
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) {
+          chunks.push(chunk as Buffer);
+        }
+        const raw = Buffer.concat(chunks);
+        // Simple multipart boundary extraction.
+        const boundaryMatch = contentType.match(/boundary=([^;]+)/);
+        if (!boundaryMatch) {
+          sendJson(req, res, 400, { error: "No boundary in Content-Type" });
+          return true;
+        }
+        const boundary = boundaryMatch[1].trim().replace(/"/g, "");
+        const parts = raw.split(Buffer.from(`--${boundary}`));
+        let savedPath: string | null = null;
+        for (const part of parts) {
+          const headerEnd = part.indexOf("\r\n\r\n");
+          if (headerEnd === -1) continue;
+          const header = part.slice(0, headerEnd).toString();
+          const data = part.slice(headerEnd + 4, part.lastIndexOf("\r\n"));
+          const nameMatch = header.match(/name="([^"]+)"/);
+          if (!nameMatch) continue;
+          const fieldName = nameMatch[1];
+          if (fieldName === "path") {
+            savedPath = data.toString().trim();
+          } else if (fieldName === "file" && savedPath) {
+            // Register the file in sync registry.
+            _syncRegistry.set(savedPath, {
+              size: data.length,
+              modified: Math.floor(Date.now() / 1000),
+              hash: require("node:crypto").createHash("sha256").update(data).digest("hex").slice(0, 16),
+            });
+          }
+        }
+        if (!savedPath) {
+          sendJson(req, res, 400, { error: "No path field in multipart" });
+          return true;
+        }
+        sendJson(req, res, 200, { ok: true, path: savedPath });
+      } catch (err) {
+        console.error("[desktop-sync] Upload error:", err);
+        sendJson(req, res, 500, { error: "Internal server error" });
+      }
+      return true;
+    }
+
+    // GET /desktop/sync/status — sync configuration
+    if (p === "/desktop/sync/status" && method === "GET") {
+      sendJson(req, res, 200, {
+        enabled: SYNC_CONFIG.enabled,
+        max_file_size: SYNC_CONFIG.maxFileSize,
+        max_total_files: SYNC_CONFIG.maxTotalFiles,
+        allowed_patterns: SYNC_CONFIG.allowedPatterns,
+        blocked_patterns: SYNC_CONFIG.blockedPatterns,
+        registered_files: _syncRegistry.size,
+      });
+      return true;
+    }
+
+    return false; // not a desktop-sync route
   }
 
   // --- Auth routes (real when deps.auth set; else no-auth default user) ---
