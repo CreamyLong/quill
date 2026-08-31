@@ -45,7 +45,9 @@ quill/
 ├── extensions_config.example.json  # Template → copy to extensions_config.json (gitignored): MCP servers + skills
 ├── backend/                        # Python backend — see backend/AGENTS.md
 │   ├── Makefile                    # Per-module backend commands (dev, gateway, test, lint, migrate-rev)
-│   ├── packages/harness/           # quill-harness package (import: quill.*) — agent framework
+│   ├── packages/
+│   │   ├── harness/               # quill-harness package (import: quill.*) — agent framework
+│   │   └── extension-api/          # Public, host-independent extension contracts (import: quill_extension_api.*)
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
 ├── docker/                         # docker-compose files, nginx config, provisioner
@@ -54,6 +56,7 @@ quill/
 ├── scripts/                        # Root orchestration scripts invoked by the Makefile (check, configure, doctor, support_bundle, serve, nginx, docker, deploy, setup_wizard)
 ├── tests/                          # Root-level tests (currently tests/skills/ — public skill tests)
 └── docs/                           # Cross-cutting docs, plans, and design notes
+    └── harness-framework-comparison.md  # Framework comparison & suitability analysis
 ```
 
 Runtime config lives at the **repo root**: copy `config.example.yaml` → `config.yaml`

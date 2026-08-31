@@ -1,0 +1,27 @@
+{
+  "name": "quill-extension-api",
+  "version": "1.0.0",
+  "description": "Public, host-independent extension contracts for the Quill agent harness.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@langchain/core": ">=0.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@langchain/core": {
+      "optional": true
+    }
+  }
+}

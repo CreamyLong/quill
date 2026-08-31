@@ -42,10 +42,12 @@ quill/
 │   │           │   ├── builtins/      # general-purpose, bash agents
 │   │           │   ├── executor.py    # Background execution engine
 │   │           │   └── registry.py    # Agent registry
-│   │           ├── tools/builtins/    # Built-in tools (present_files, ask_clarification, view_image)
+│   │           ├── tools/builtins/    # Built-in tools (present_files, ask_clarification, view_image, review_skill_package)
 │   │           ├── mcp/               # MCP integration (tools, cache, client)
 │   │           ├── models/            # Model factory with thinking/vision support
 │   │           ├── skills/            # Skills discovery, loading, parsing
+│   │           ├── extensions/        # Plugin loader, registry, placement, and isolation
+│   │           ├── integrations/      # Managed first-party integration installers (e.g. Lark CLI skill pack)
 │   │           ├── config/            # Configuration system (app, model, sandbox, tool, etc.)
 │   │           ├── community/         # Community tools (search/fetch/scrape, image search, AIO sandbox)
 │   │           ├── reflection/        # Dynamic module loading (resolve_variable, resolve_class)
@@ -56,9 +58,16 @@ quill/
 │   │   │   ├── app.py         # FastAPI application
 │   │   │   └── routers/       # FastAPI route modules (models, mcp, memory, skills, uploads, threads, artifacts, agents, suggestions, channels)
 │   │   └── channels/          # IM platform integrations
+│   ├── scripts/               # Backend scripts
+│   │   ├── benchmark/         # Standalone reproducible backend benchmarks
+│   │   │   └── memory_eviction/  # Memory fact eviction policy benchmarks
+│   │   └── detect_thread_boundaries.ts  # Thread/event-loop boundary inventory
 │   ├── tests/                 # Test suite
 │   └── docs/                  # Documentation
 ├── frontend/                   # Next.js frontend application
+├── packages/
+│   │   └── extension-api/      # Public, host-independent extension contracts (import: quill_extension_api.*)
+│   │       └── src/            # Extension API types and helpers
 └── skills/                     # Agent skills directory
     ├── public/                # Public skills (committed)
     └── custom/                # Custom skills (gitignored)
@@ -415,6 +424,64 @@ Lets a caller pass per-request, short-lived end-user credentials (e.g. an ERP to
 - **Inherited-env scrub**: `execute_command` no longer leaks the Gateway's `os.environ` to skill subprocesses — `env_policy.build_sandbox_env` drops secret-looking names (`*KEY*`/`*SECRET*`/`*TOKEN*`/`*PASSWORD*`/`*CREDENTIAL*`/`*DSN*` + a connection-string denylist like `DATABASE_URL`/`REDIS_URL`/`GH_PAT`) so platform credentials never reach a skill; a skill that needs one must declare it.
 - **Leak surfaces sealed** (verified by a real-gateway e2e run — secret reaches the sandbox but none of these): prompt (value never in a message), trace (`tracing/metadata.py` never copies `context`), checkpoint (secrets live on `runtime.context`, not graph state), audit (journal records names only), stdout (`tools.py::mask_secret_values` redacts injected values from bash output), and **run-record persistence + run API** (`services.py::start_run` stores `redact_config_secrets(body.config)` so `runs.kwargs_json` and `RunResponse.kwargs` never carry the secret).
 - **Scope / non-goals**: only `/slash`-activated skills receive secrets (autonomously invoked enabled skills do not); no persistence/vaulting; the MCP per-user-credential gap (#3322) is a sibling, not covered here. Tests: `tests/test_skill_request_scoped_secrets.py`.
+
+### Extension System (`packages/harness/quill/extensions/`)
+
+Mirrors the DeerFlow 2.0 extension system. Extensions are plugins that hook into the agent lifecycle without modifying core code.
+
+- **Format**: Directory with `extension.yaml` (metadata: name, version, description, entrypoint, hooks) and the entrypoint module
+- **Discovery**: `discoverExtensions(paths)` scans configured directories for `extension.yaml` files
+- **Lifecycle hooks**: `pre_model`, `post_model`, `pre_tool`, `post_tool`, `on_agent_start`, `on_agent_end`
+- **Registry**: `getLoadedExtensions()`, `getExtension(name)`, `setExtensionEnabled(name, enabled)`, `removeExtension(name)`
+- **Validation**: `validateManifest()` checks required fields and hook phase names
+- **Config**: `config.yaml → extensions.paths` controls where extensions are discovered from
+
+### Integration Installers (`packages/harness/quill/integrations/`)
+
+Mirrors the DeerFlow 2.0 integration system. Integrations are install-time packages that bundle skills + MCP configs for external services.
+
+- **Format**: Directory with `integration.yaml` (metadata: name, version, description, service, skills, mcpServers, setupSteps)
+- **Discovery**: `discoverIntegrations(paths)` scans configured directories
+- **Difference from extensions**: Integrations are install-time (add skills + MCP configs); extensions are runtime (hook into agent lifecycle)
+- **Example**: `integrations/lark/` — Lark/Feishu CLI skill pack with messaging, document, and calendar skills
+
+### Extension API (`packages/extension-api/`)
+
+Public, host-independent extension contracts. This package defines the stable interfaces that third-party extension authors implement against, without depending on the full harness runtime.
+
+- **Import prefix**: `quill_extension_api.*`
+- **Purpose**: Dependency-free, lightweight package so extension authors can depend on it without pulling in the entire Quill harness
+- **Exports**: `ExtensionManifest`, `ExtensionHookPhase`, `ExtensionHookContext`, `ExtensionHookResult`, `ExtensionModule`, `createExtensionManifest()`, `validateExtensionModule()`
+- **Version**: `EXTENSION_API_VERSION = "1.0.0"`
+
+### Benchmark Framework (`backend/scripts/benchmark/`)
+
+Mirrors the DeerFlow 2.0 benchmark framework. Standalone, reproducible measurements and evaluations of production backend behavior.
+
+- **Principles**:
+  - A benchmark may import the production function it measures, but must not duplicate or introduce an alternative runtime implementation
+  - Pin every external dataset by immutable revision and SHA-256
+  - Never commit upstream dataset text, credentials, complete provider requests, or response headers
+  - Use fixed clocks and deterministic ordering for offline selection
+  - Results must record the config, manifest, prompt, dataset, and git revisions used
+- **Current benchmarks**:
+  - `scripts/benchmark/memory_eviction/` — Evaluates the production `selectFactsForCapacity()` implementation with confidence-based and hybrid-v1 eviction policies
+- **Run**: `npx tsx scripts/benchmark/memory_eviction/validate_contracts.ts`
+
+### Thread-Boundary Detection (`backend/scripts/detect_thread_boundaries.ts`)
+
+Mirrors the DeerFlow 2.0 `make detect-thread-boundaries` target. Inventories backend executor/thread/event-loop boundaries.
+
+- **Scans for**: `execSync`, `readFileSync`, `writeFileSync` (blocking I/O), `setTimeout`/`setInterval` (timer drift), `.invoke()` (sync LangChain calls), thread pool usage
+- **Run**: `npx tsx scripts/detect_thread_boundaries.ts`
+
+### Package Import Hygiene
+
+The `quill.agents` and `quill.subagents` package roots expose heavyweight graph/executor entrypoints lazily:
+
+- `agents/lead_agent/entrypoint.ts` — Thin module-level `makeLeadAgent()` function for LangGraph Server resolution. All heavyweight imports (tools, models, skills, tracing) are kept INSIDE the function body so importing the module stays lightweight
+- Internal modules that only need lightweight types, config, or registries should import the concrete submodule instead of the package root
+- This prevents circular imports and reduces startup latency
 
 ### Model Factory (`packages/harness/quill/models/factory.py`)
 

@@ -1,0 +1,12 @@
+name: lark
+version: 1.0.0
+description: Lark/Feishu CLI skill pack — adds Lark messaging, document, and calendar skills
+service: lark
+skills:
+  - skills/public/lark-messaging
+  - skills/public/lark-documents
+  - skills/public/lark-calendar
+setupSteps:
+  - Ensure your Feishu/Lark app has the correct OAuth scopes
+  - Configure channels.feishu in config.yaml with your app_id and app_secret
+  - Run `make dev` to start the Gateway with Lark channel enabled
