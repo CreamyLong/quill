@@ -1,4 +1,13 @@
-export const SUPPORTED_LOCALES = ["en-US", "zh-CN", "ko-KR"] as const;
+export const SUPPORTED_LOCALES = [
+  "en-US",
+  "zh-CN",
+  "ko-KR",
+  "ja-JP",
+  "fr-FR",
+  "ru-RU",
+  "es-ES",
+  "ar-SA",
+] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en-US";
 
@@ -38,6 +47,21 @@ export function normalizeLocale(locale: string | null | undefined): Locale {
   }
   if (locale.toLowerCase().startsWith("ko")) {
     return "ko-KR";
+  }
+  if (locale.toLowerCase().startsWith("ja")) {
+    return "ja-JP";
+  }
+  if (locale.toLowerCase().startsWith("fr")) {
+    return "fr-FR";
+  }
+  if (locale.toLowerCase().startsWith("ru")) {
+    return "ru-RU";
+  }
+  if (locale.toLowerCase().startsWith("es")) {
+    return "es-ES";
+  }
+  if (locale.toLowerCase().startsWith("ar")) {
+    return "ar-SA";
   }
 
   return DEFAULT_LOCALE;

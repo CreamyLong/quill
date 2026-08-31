@@ -4,7 +4,7 @@
 
 <div align="center">
 
-**English** · [中文](README_zh.md) · [한국어](README_ko.md)
+**English** · [中文](README_zh.md) · [한국어](README_ko.md) · [日本語](README_ja.md) · [Français](README_fr.md) · [Русский](README_ru.md) · [Español](README_es.md) · [العربية](README_ar.md)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -227,7 +227,7 @@ flowchart TB
 | **Extension System** | Build plugins with lifecycle hooks (pre_model, post_model, pre_tool, post_tool) |
 | **Long-Term Memory** | Continuously records user profile and conversation history with eviction policies |
 | **Multi-Model** | DeepSeek / OpenAI / Anthropic / vLLM / Ollama and more |
-| **Multi-Language** | UI supports English, 中文, 한국어 |
+| **Multi-Language** | UI supports 8 languages: English, 中文, 한국어, 日本語, Français, Русский, Español, العربية |
 | **IM Channels** | Telegram, Slack, Discord, Feishu, DingTalk integration |
 | **Scheduled Tasks** | Cron/interval-driven scheduled runs with multi-instance support |
 
@@ -284,13 +284,18 @@ Connect additional MCP services via `extensions_config.json`.
 
 ## 🌐 Internationalization
 
-Quill supports three languages:
+Quill supports eight languages:
 
 | Language | Locale | Status |
 |----------|--------|--------|
 | English | `en-US` | ✅ Complete |
 | 中文 (Chinese) | `zh-CN` | ✅ Complete |
 | 한국어 (Korean) | `ko-KR` | ✅ Complete |
+| 日本語 (Japanese) | `ja-JP` | ✅ Complete |
+| Français (French) | `fr-FR` | ✅ Complete |
+| Русский (Russian) | `ru-RU` | ✅ Complete |
+| Español (Spanish) | `es-ES` | ✅ Complete |
+| العربية (Arabic) | `ar-SA` | ✅ Complete |
 
 Switch languages in Settings → Appearance → Language.
 
