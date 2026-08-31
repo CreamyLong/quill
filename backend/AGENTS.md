@@ -44,10 +44,13 @@ quill/
 │   │           │   └── registry.py    # Agent registry
 │   │           ├── tools/builtins/    # Built-in tools (present_files, ask_clarification, view_image, review_skill_package)
 │   │           ├── mcp/               # MCP integration (tools, cache, client)
+│   │           ├── mcp_tasks/         # Durable MCP task runtime (lease-based execution)
 │   │           ├── models/            # Model factory with thinking/vision support
 │   │           ├── skills/            # Skills discovery, loading, parsing
 │   │           ├── extensions/        # Plugin loader, registry, placement, and isolation
 │   │           ├── integrations/      # Managed first-party integration installers (e.g. Lark CLI skill pack)
+│   │           ├── capability_marketplace/  # Capability search & execution (OpenWork pattern)
+│   │           ├── planning_artifacts/      # Plan.md/Implement.md for long-horizon tasks
 │   │           ├── config/            # Configuration system (app, model, sandbox, tool, etc.)
 │   │           ├── community/         # Community tools (search/fetch/scrape, image search, AIO sandbox)
 │   │           ├── reflection/        # Dynamic module loading (resolve_variable, resolve_class)
@@ -393,6 +396,56 @@ Additional providers also live here (`brave`, `browserless`, `crawl4ai`, `ddg_se
 - Missing ACP executables now return an actionable error message instead of a raw `[Errno 2]`
 - Each ACP agent uses a per-thread workspace at `{base_dir}/users/{user_id}/threads/{thread_id}/acp-workspace/`. The workspace is accessible to the lead agent via the virtual path `/mnt/acp-workspace/` (read-only). In docker sandbox mode, the directory is volume-mounted into the container at `/mnt/acp-workspace` (read-only); in local sandbox mode, path translation is handled by `tools.py`
 
+### Durable MCP Task Runtime (`packages/harness/quill/mcp_tasks/`)
+
+Port of DeerFlow 2.0's `mcp_tasks` module. Long-running MCP work uses a separate durable task runtime so the agent loop is never blocked on slow remote operations. The database is the source of truth; ThreadState receives a bounded projection.
+
+- **Lifecycle**: `claim` → `execute` → `poll` → `cancel`/`complete`
+- **Lease-based**: A worker claims a task, executes it, and releases the lease on completion or failure
+- **Components**:
+  - `types.ts` — `McpTask`, `McpTaskStatus`, `McpTaskRuntimeConfig`, `CreateMcpTaskOptions`
+  - `store.ts` — `McpTaskStore` with atomic claim/complete/fail/cancel operations and lease reaping
+  - `runtime.ts` — `McpTaskRuntime` with background lease reaper and auto-execution
+- **Task statuses**: `pending`, `claimed`, `running`, `completed`, `failed`, `cancelled`, `timed_out`
+- **Configuration**: `defaultLeaseMs` (30s), `maxConcurrentPerWorker` (5), `maxAttempts` (3), `leaseReaperIntervalMs` (10s), `maxExecutionMs` (10min)
+
+### Memory Eviction Policies (`packages/harness/quill/agents/memory/eviction/`)
+
+Port of DeerFlow 2.0's DeerMem eviction policies. Prevents unbounded memory growth in long-running agents by evicting low-value facts when capacity is exceeded.
+
+- **Two strategies**:
+  1. **Confidence-based** (`confidenceBasedEviction`): Evicts lowest-confidence facts first; facts above `protectedConfidenceThreshold` (0.9) are never evicted
+  2. **Hybrid-v1** (`hybridV1Eviction`): Composite score = `confidence * 0.5 + recency * 0.3 + category_weight * 0.2`
+- **Components**:
+  - `types.ts` — `EvictableFact`, `EvictionConfig`, `EvictionResult`, `FactScore`
+  - `policies.ts` — `selectFactsForCapacity()`, `wouldEvict()`, `getEvictionStats()`
+- **Categories**: `preference` (weight 1.0), `goal` (0.9), `behavior` (0.8), `knowledge` (0.7), `context` (0.6)
+- **Recency**: Exponential decay with 30-day half-life
+
+### Capability Marketplace (`packages/harness/quill/capability_marketplace/`)
+
+Port of OpenWork's `search_capability` + `execute_capability` pattern. Provides a unified interface for discovering and invoking capabilities across skills, MCP tools, and community integrations.
+
+- **Components**:
+  - `types.ts` — `Capability`, `CapabilitySearchQuery`, `CapabilitySearchResult`, `CapabilityExecutionRequest`
+  - `marketplace.ts` — `CapabilityMarketplace` with search, filter, sort, and execute
+- **Categories**: `research`, `coding`, `analysis`, `creative`, `communication`, `automation`, `integration`
+- **Sources**: `skill`, `mcp_tool`, `automation`, `community`
+- **Search**: Free-text query, category/source/tag filters, relevance/rating/usage/recent sorting
+
+### Structured Planning Artifacts (`packages/harness/quill/planning_artifacts/`)
+
+Port of OpenAI Codex's Plan.md/Implement.md/Documentation.md pattern. Provides reusable harness artifacts for long-horizon tasks that exceed a single context window.
+
+- **Three artifact types**:
+  1. **Plan.md** — High-level task decomposition with milestones and sub-tasks
+  2. **Implement.md** — Detailed implementation steps and progress
+  3. **Documentation.md** — Generated documentation and decisions log
+- **Components**:
+  - `types.ts` — `PlanningArtifact`, `Milestone`, `PlanningTask`, `PlanningConfig`
+  - `manager.ts` — `PlanningArtifactManager` with CRUD, milestone/task status tracking, progress summary, persist/load
+- **Features**: Markdown serialization, milestone dependencies, progress percentage, archival, disk persistence
+
 ### MCP System (`packages/harness/quill/mcp/`)
 
 - Uses `langchain-mcp-adapters` `MultiServerMCPClient` for multi-server management
@@ -435,6 +488,18 @@ Mirrors the DeerFlow 2.0 extension system. Extensions are plugins that hook into
 - **Registry**: `getLoadedExtensions()`, `getExtension(name)`, `setExtensionEnabled(name, enabled)`, `removeExtension(name)`
 - **Validation**: `validateManifest()` checks required fields and hook phase names
 - **Config**: `config.yaml → extensions.paths` controls where extensions are discovered from
+
+#### Extension Contribution Kinds (`extensions/contributions.ts`)
+
+Port of DeerFlow 2.0's five contribution kinds. Extensions can contribute five types of capabilities:
+
+1. **Middleware** — isolated middleware at semantic lead/subagent positions (`before_agent`, `before_model`, `wrap_model_call`, `after_model`, `after_agent`, `before_tool`, `after_tool`)
+2. **Lifecycle hooks** — lead and agent task-lifecycle callbacks (`on_agent_start`, `on_agent_end`, `on_run_start`, `on_run_end`, `on_tool_start`, `on_tool_end`)
+3. **Observers** — observe system-model calls (`goal`, `memory`, `title`, `summarization`)
+4. **Gateway services** — app-scoped runtime dependencies started at Gateway startup with dependency injection
+5. **HTTP routers** — eager FastAPI HTTP routers mounted at startup (all require authentication)
+
+The `ContributionRegistry` manages all contributions and provides `initServices()` / `stopServices()` lifecycle management with dependency-ordered startup and reverse-ordered shutdown.
 
 ### Integration Installers (`packages/harness/quill/integrations/`)
 
@@ -599,6 +664,12 @@ Focused regression coverage for the updater lives in `backend/tests/test_memory_
 - `max_facts` / `fact_confidence_threshold` - Fact storage limits (100 / 0.7)
 - `max_injection_tokens` - Token limit for prompt injection (2000)
 - `token_counting` - Token counting strategy for the injection budget: `tiktoken` (default, accurate but may download BPE data from a public endpoint on first use — can block for a long time in network-restricted environments, see issues #3402/#3429) or `char` (network-free CJK-aware char estimate, never touches tiktoken)
+
+**Memory Eviction** (`agents/memory/eviction/`):
+- Prevents unbounded memory growth via `selectFactsForCapacity()`
+- Two strategies: `confidence` (evict lowest-confidence first) and `hybrid-v1` (composite score with recency + category weights)
+- Protected facts (confidence ≥ 0.9) are never evicted
+- Configured via `memory.eviction` section in `config.yaml`
 
 ### Reflection System (`packages/harness/quill/reflection/`)
 
