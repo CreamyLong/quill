@@ -49,7 +49,7 @@ export function CommunityToolsSettingsPage() {
 
   const handleFieldChange = (index: number, key: string, value: string) => {
     setEditingTools((prev) => {
-      const next = [...prev];
+      const next: ToolConfigEntry[] = [...prev];
       next[index] = { ...next[index], [key]: value };
       return next;
     });
@@ -58,7 +58,7 @@ export function CommunityToolsSettingsPage() {
 
   const handleToggle = (index: number, enabled: boolean) => {
     setEditingTools((prev) => {
-      const next = [...prev];
+      const next: ToolConfigEntry[] = [...prev];
       next[index] = { ...next[index], enabled };
       return next;
     });

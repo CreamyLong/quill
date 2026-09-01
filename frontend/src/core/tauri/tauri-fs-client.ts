@@ -20,7 +20,7 @@ export interface PickResult {
 let _invoke: (<T>(cmd: string, args?: Record<string, unknown>) => Promise<T>) | null = null;
 
 /** Lazily resolve the Tauri `invoke` function (only available in Tauri app). */
-async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (!_invoke) {
     if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
       throw new Error("tauri-invoke-unavailable");
