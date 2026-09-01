@@ -48,20 +48,20 @@ export function CommunityToolsSettingsPage() {
   };
 
   const handleFieldChange = (index: number, key: string, value: string) => {
-    setEditingTools((prev) => {
-      const next: ToolConfigEntry[] = [...prev];
-      next[index] = { ...next[index], [key]: value };
-      return next;
-    });
+    setEditingTools((prev) =>
+      prev.map((entry, i) =>
+        i === index ? { ...entry, [key]: value } : entry,
+      ),
+    );
     setDirty(true);
   };
 
   const handleToggle = (index: number, enabled: boolean) => {
-    setEditingTools((prev) => {
-      const next: ToolConfigEntry[] = [...prev];
-      next[index] = { ...next[index], enabled };
-      return next;
-    });
+    setEditingTools((prev) =>
+      prev.map((entry, i) =>
+        i === index ? { ...entry, enabled } : entry,
+      ),
+    );
     setDirty(true);
   };
 
