@@ -88,15 +88,15 @@ export const koKR: Translations = {
       "`skill-creator`와 함께 새로운 스킬을 단계별로 구축하겠습니다. 먼저, 이 스킬이 무엇을 하기를 원하시나요?",
     addAttachments: "첨부파일 추가",
     mode: "모드",
-    flashMode: "빠름",
-    flashModeDescription: "빠르고 효율적이지만 정확하지 않을 수 있습니다",
-    reasoningMode: "추론",
-    reasoningModeDescription: "행동 전 추론, 시간과 정확성의 균형",
-    proMode: "에이전트",
-    proModeDescription:
+    swiftMode: "빠름",
+    swiftModeDescription: "빠르고 효율적이지만 정확하지 않을 수 있습니다",
+    reflectMode: "추론",
+    reflectModeDescription: "행동 전 추론, 시간과 정확성의 균형",
+    architectMode: "에이전트",
+    architectModeDescription:
       "추론, 계획 및 실행, 더 정확한 결과를 얻지만 시간이 더 걸릴 수 있습니다",
-    ultraMode: "에이전트 클러스터",
-    ultraModeDescription:
+    swarmMode: "에이전트 클러스터",
+    swarmModeDescription:
       "프로 모드에 서브 에이전트를 추가하여 작업 분담, 복잡한 다단계 작업에 최적",
     reasoningEffort: "추론 노력",
     reasoningEffortMinimal: "최소",
@@ -390,6 +390,7 @@ export const koKR: Translations = {
     title: "설정",
     description: "Quill의 외관과 동작을 조정합니다.",
     sections: {
+      models: "모델",
       account: "계정",
       appearance: "외관",
       channels: "채널",

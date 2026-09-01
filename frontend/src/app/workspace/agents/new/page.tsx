@@ -89,7 +89,7 @@ export default function NewAgentPage() {
   const { thread, sendMessage } = useThreadStream({
     threadId: undefined,
     context: {
-      mode: "flash",
+      mode: "swift",
       is_bootstrap: true,
     },
     onFinish() {

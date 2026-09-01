@@ -89,16 +89,16 @@ export const arSA: Translations = {
       "سنقوم ببناء مهارة جديدة خطوة بخطوة باستخدام `skill-creator`. للبدء، ماذا تريد أن تفعل هذه المهارة؟",
     addAttachments: "إضافة مرفقات",
     mode: "الوضع",
-    flashMode: "سريع",
-    flashModeDescription: "سريع وفعال، لكن قد لا يكون دقيقاً",
-    reasoningMode: "التفكير",
-    reasoningModeDescription:
+    swiftMode: "سريع",
+    swiftModeDescription: "سريع وفعال، لكن قد لا يكون دقيقاً",
+    reflectMode: "التفكير",
+    reflectModeDescription:
       "التفكير قبل الإجراء، توازن بين الوقت والدقة",
-    proMode: "الوكيل",
-    proModeDescription:
+    architectMode: "الوكيل",
+    architectModeDescription:
       "التفكير والتخطيط والتنفيذ، للحصول على نتائج أكثر دقة، قد يستغرق وقتاً أطول",
-    ultraMode: "مجموعة الوكلاء",
-    ultraModeDescription:
+    swarmMode: "مجموعة الوكلاء",
+    swarmModeDescription:
       "وضع الوكيل مع وكلاء فرعيين لتقسيم العمل؛ الأفضل للمهام المعقدة متعددة الخطوات",
     reasoningEffort: "جهد التفكير",
     reasoningEffortMinimal: "أدنى",
@@ -518,6 +518,7 @@ export const arSA: Translations = {
     title: "الإعدادات",
     description: "اضبط كيف يبدو Quill ويتصرف بالنسبة لك.",
     sections: {
+      models: "Models",
       account: "الحساب",
       appearance: "المظهر",
       channels: "القنوات",

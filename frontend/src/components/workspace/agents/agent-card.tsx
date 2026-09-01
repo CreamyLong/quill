@@ -122,16 +122,16 @@ export function AgentCard({ agent }: AgentCardProps) {
 
   return (
     <>
-      <Card className="group flex flex-col transition-shadow hover:shadow-md">
+      <Card className="group flex flex-col border-l-4 border-l-primary/40 transition-all hover:border-l-primary hover:shadow-md">
         <CardHeader className="pb-3">
           <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                 <BotIcon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <TruncatedTooltip text={agent.name}>
-                  <CardTitle className="truncate text-base">
+                  <CardTitle className="truncate text-base font-semibold">
                     {agent.name}
                   </CardTitle>
                 </TruncatedTooltip>

@@ -89,16 +89,16 @@ export const frFR: Translations = {
       "Nous allons créer une nouvelle compétence étape par étape avec `skill-creator`. Pour commencer, que doit faire cette compétence ?",
     addAttachments: "Ajouter des pièces jointes",
     mode: "Mode",
-    flashMode: "Rapide",
-    flashModeDescription: "Rapide et efficace, mais peut manquer de précision",
-    reasoningMode: "Raisonnement",
-    reasoningModeDescription:
+    swiftMode: "Rapide",
+    swiftModeDescription: "Rapide et efficace, mais peut manquer de précision",
+    reflectMode: "Raisonnement",
+    reflectModeDescription:
       "Raisonnement avant action, équilibre entre temps et précision",
-    proMode: "Agent",
-    proModeDescription:
+    architectMode: "Agent",
+    architectModeDescription:
       "Raisonnement, planification et exécution, pour des résultats plus précis, peut prendre plus de temps",
-    ultraMode: "Groupe d'agents",
-    ultraModeDescription:
+    swarmMode: "Groupe d'agents",
+    swarmModeDescription:
       "Mode Pro avec des sous-agents pour diviser le travail ; idéal pour les tâches complexes en plusieurs étapes",
     reasoningEffort: "Effort de raisonnement",
     reasoningEffortMinimal: "Minimal",
@@ -476,6 +476,7 @@ export const frFR: Translations = {
     title: "Paramètres",
     description: "Ajustez l'apparence et le comportement de Quill selon vos préférences.",
     sections: {
+      models: "Models",
       account: "Compte",
       appearance: "Apparence",
       channels: "Canaux",

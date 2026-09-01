@@ -31,8 +31,14 @@ Main agent dispatches specialized sub-agents for parallel complex tasks — gene
 ### 🧩 Extensible Skills & Extensions
 Install skills to extend capabilities. Build custom extensions with lifecycle hooks (pre_model, post_model, pre_tool, post_tool).
 
-### 🧠 Long-Term Memory
-Continuously records user profile and conversation history with confidence-based fact eviction policies.
+### 🧠 Long-Term Memory & Dreaming
+Continuously records user profile and conversation history with confidence-based fact eviction policies. Background "dreaming" consolidation promotes strong short-term signals to durable long-term memory (Light → REM → Deep phases).
+
+### 💓 Proactive Heartbeat
+Periodic agent turns that check whether anything needs attention — with a persistent monitor scratch checklist, active-hours windows, and cost-controlled isolated sessions.
+
+### 🛡️ Tool Annotations & Guardrails
+Tools declare safety properties (read-only, destructive, idempotent, open-world) that feed into risk-level-based authorization. Deterministic security scanner blocks malicious skills offline before any LLM call.
 
 ### 🌐 Multi-Model & Multi-Language
 DeepSeek / OpenAI / Anthropic / vLLM / Ollama and more. UI supports English, 中文, and 한국어.

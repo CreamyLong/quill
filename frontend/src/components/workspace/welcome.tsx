@@ -23,7 +23,7 @@ export function Welcome({
   mode,
 }: {
   className?: string;
-  mode?: "ultra" | "pro" | "thinking" | "flash";
+  mode?: "swarm" | "architect" | "reflect" | "swift";
 }) {
   const { t } = useI18n();
   const searchParams = useSearchParams();
@@ -43,8 +43,8 @@ export function Welcome({
         ) : (
           <div className="flex max-w-full flex-col items-center gap-3">
             <AuroraText
-              colors={["#e9c665", "#efefbb", "#e3a812", "#e9c665"]}
-              className="drop-shadow-[0_0_25px_rgba(233,198,101,0.45)]"
+              colors={["#a7f3d0", "#34d399", "#059669", "#a7f3d0"]}
+              className="drop-shadow-[0_0_25px_rgba(52,211,153,0.45)]"
             >
               {t.welcome.greeting}
             </AuroraText>

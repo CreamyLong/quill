@@ -17,6 +17,12 @@ export interface GuardrailRequest {
   oauthId?: string | null;
   runId?: string | null;
   toolCallId?: string | null;
+  /**
+   * Optional metadata carried alongside the request. Used by the annotation
+   * middleware to pass tool safety hints (readOnly/destructive/idempotent/
+   * openWorld) to the AnnotationProvider.
+   */
+  metadata?: Record<string, unknown>;
 }
 
 /** Structured reason for an allow/deny decision (OAP reason object). */

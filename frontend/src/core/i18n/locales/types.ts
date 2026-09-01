@@ -69,14 +69,14 @@ export interface Translations {
     createSkillPrompt: string;
     addAttachments: string;
     mode: string;
-    flashMode: string;
-    flashModeDescription: string;
-    reasoningMode: string;
-    reasoningModeDescription: string;
-    proMode: string;
-    proModeDescription: string;
-    ultraMode: string;
-    ultraModeDescription: string;
+    swiftMode: string;
+    swiftModeDescription: string;
+    reflectMode: string;
+    reflectModeDescription: string;
+    architectMode: string;
+    architectModeDescription: string;
+    swarmMode: string;
+    swarmModeDescription: string;
     reasoningEffort: string;
     reasoningEffortMinimal: string;
     reasoningEffortMinimalDescription: string;
@@ -361,6 +361,7 @@ export interface Translations {
     title: string;
     description: string;
     sections: {
+      models: string;
       account: string;
       appearance: string;
       channels: string;

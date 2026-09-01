@@ -4,7 +4,7 @@ import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { FlickeringGrid } from "@/components/ui/flickering-grid";
+import { FloatingParticles } from "@/components/ui/floating-particles";
 import { WordRotate } from "@/components/ui/word-rotate";
 import { env } from "@/env";
 import { cn } from "@/lib/utils";
@@ -24,13 +24,13 @@ export function Hero({ className }: { className?: string }) {
         <div className="absolute bottom-0 left-1/3 h-[40vh] w-[40vh] animate-[drift_22s_ease-in-out_infinite] rounded-full bg-teal-400/10 blur-[80px]" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background" />
       </div>
-      <FlickeringGrid
-        className="absolute inset-0 z-0 translate-y-8 mask-[url(/images/feather.svg)] mask-size-[100vw] mask-center mask-no-repeat md:mask-size-[72vh]"
-        squareSize={4}
-        gridGap={4}
-        color={"white"}
-        maxOpacity={0.3}
-        flickerChance={0.25}
+      <FloatingParticles
+        className="absolute inset-0 z-0"
+        count={40}
+        color="hsl(var(--primary))"
+        minSize={2}
+        maxSize={6}
+        speed={0.8}
       />
       <div className="container-md relative z-10 mx-auto flex h-screen flex-col items-center justify-center">
         <h1 className="flex items-center gap-2 text-4xl font-bold md:text-6xl">
