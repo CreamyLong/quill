@@ -29,20 +29,20 @@ export async function GET(
           "Content-Disposition",
           `attachment; filename="${artifactPath}"`,
         );
-        return new Response(fs.readFileSync(artifactPath), {
+        return new Response(fs.readFileSync(/*turbopackIgnore: true*/ artifactPath), {
           status: 200,
           headers,
         });
       }
       if (artifactPath.endsWith(".mp4")) {
-        return new Response(fs.readFileSync(artifactPath), {
+        return new Response(fs.readFileSync(/*turbopackIgnore: true*/ artifactPath), {
           status: 200,
           headers: {
             "Content-Type": "video/mp4",
           },
         });
       }
-      return new Response(fs.readFileSync(artifactPath), { status: 200 });
+      return new Response(fs.readFileSync(/*turbopackIgnore: true*/ artifactPath), { status: 200 });
     }
   }
   return new Response("File not found", { status: 404 });
