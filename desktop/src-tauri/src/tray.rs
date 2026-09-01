@@ -50,13 +50,11 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
                 if let Some(win) = app.get_webview_window("main") {
                     let _ = win.show();
                     let _ = win.set_focus();
-                    let _ = win.emit("tray-open-workspace", ());
+                    let _ = app.emit("tray-open-workspace", ());
                 }
             }
             "sync" => {
-                if let Some(win) = app.get_webview_window("main") {
-                    let _ = win.emit("tray-sync-now", ());
-                }
+                let _ = app.emit("tray-sync-now", ());
             }
             "quit" => {
                 app.exit(0);
