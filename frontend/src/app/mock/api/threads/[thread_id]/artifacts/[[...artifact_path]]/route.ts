@@ -18,8 +18,8 @@ export async function GET(
   let artifactPath = (await params).artifact_path?.join("/") ?? "";
   if (artifactPath.startsWith("mnt/")) {
     artifactPath = path.resolve(
-      process.cwd(),
-      artifactPath.replace("mnt/", `public/demo/threads/${threadId}/`),
+      /*turbopackIgnore: true*/ process.cwd(),
+      /*turbopackIgnore: true*/ artifactPath.replace("mnt/", `public/demo/threads/${threadId}/`),
     );
     if (fs.existsSync(artifactPath)) {
       if (request.nextUrl.searchParams.get("download") === "true") {
