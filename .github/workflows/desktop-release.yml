@@ -1,0 +1,232 @@
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.2.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: "desktop-release-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  # ── Determine release tag ──────────────────────────────────────────
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          # Strip leading 'v' for version
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release tag: $TAG (version $VERSION)"
+
+  # ── Build macOS (ARM64 + Intel) ───────────────────────────────────
+  build-macos:
+    needs: meta
+    strategy:
+      matrix:
+        include:
+          - platform: "macos-latest"
+            arch: "aarch64"
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest"
+            arch: "x64"
+            args: "--target x86_64-apple-darwin"
+    runs-on: ${{ matrix.platform }}
+    env:
+      APP_VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: "${{ matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}"
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "desktop/src-tauri/target"
+
+      - name: Install frontend deps
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          pnpm build
+
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ needs.meta.outputs.tag }}
+          releaseName: "Quill Desktop ${{ needs.meta.outputs.tag }}"
+          releaseBody: |
+            Quill Desktop ${{ needs.meta.outputs.tag }}
+            
+            ## Download
+            - **macOS Apple Silicon**: `Quill.Desktop_${{ needs.meta.outputs.version }}_aarch64.dmg`
+            - **macOS Intel**: `Quill.Desktop_${{ needs.meta.outputs.version }}_x64.dmg`
+            - **Windows**: `Quill.Desktop_${{ needs.meta.outputs.version }}_x64-setup.exe`
+            - **Linux**: `Quill.Desktop_${{ needs.meta.outputs.version }}_amd64.AppImage`
+          releaseDraft: true
+          prerelease: false
+          projectPath: "desktop"
+          args: "${{ matrix.args }}"
+
+  # ── Build Windows ─────────────────────────────────────────────────
+  build-windows:
+    needs: meta
+    runs-on: windows-latest
+    env:
+      APP_VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "desktop/src-tauri/target"
+
+      - name: Install frontend deps
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          pnpm build
+
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ needs.meta.outputs.tag }}
+          releaseName: "Quill Desktop ${{ needs.meta.outputs.tag }}"
+          releaseDraft: true
+          prerelease: false
+          projectPath: "desktop"
+
+  # ── Build Linux ───────────────────────────────────────────────────
+  build-linux:
+    needs: meta
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "desktop/src-tauri/target"
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libssl-dev
+
+      - name: Install frontend deps
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          pnpm build
+
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ needs.meta.outputs.tag }}
+          releaseName: "Quill Desktop ${{ needs.meta.outputs.tag }}"
+          releaseDraft: true
+          prerelease: false
+          projectPath: "desktop"
+
+  # ── Publish release (wait for all builds) ─────────────────────────
+  publish:
+    needs: [meta, build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: always() && needs.build-macos.result == 'success' && needs.build-windows.result == 'success' && needs.build-linux.result == 'success'
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ needs.meta.outputs.tag }}" --draft=false \
+            --repo "${{ github.repository }}"
+          echo "Published release ${{ needs.meta.outputs.tag }}"
