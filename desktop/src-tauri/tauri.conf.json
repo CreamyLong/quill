@@ -6,7 +6,7 @@
     "beforeBuildCommand": "",
     "beforeDevCommand": "",
     "devUrl": "http://localhost:3100",
-    "frontendDist": "../../.quill-desktop-dist"
+    "frontendDist": "../../frontend/.quill-dist"
   },
   "app": {
     "windows": [

@@ -96,9 +96,8 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          # Disable Turbopack for production builds (has issues with
-          # dynamic filesystem access in mock routes)
-          TURBOPACK=0 pnpm build
+          # Use webpack (not Turbopack) for production builds
+          npx next build
 
       - name: Install desktop deps
         run: |
@@ -171,9 +170,8 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          # Disable Turbopack for production builds (has issues with
-          # dynamic filesystem access in mock routes)
-          TURBOPACK=0 pnpm build
+          # Use webpack (not Turbopack) for production builds
+          npx next build
 
       - name: Install desktop deps
         run: |
@@ -249,9 +247,8 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          # Disable Turbopack for production builds (has issues with
-          # dynamic filesystem access in mock routes)
-          TURBOPACK=0 pnpm build
+          # Use webpack (not Turbopack) for production builds
+          npx next build
 
       - name: Install desktop deps
         run: |
