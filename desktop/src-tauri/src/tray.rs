@@ -7,7 +7,7 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, image::Image,
+    AppHandle, Manager,
 };
 
 /// Build the system tray icon and attach it to the app.
@@ -31,8 +31,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
 
     let _tray = TrayIconBuilder::with_id("quill-tray")
         .tooltip("Quill Desktop")
-        .icon(Image::from_bytes(include_bytes!("../../icons/icon.png")).unwrap_or_default())
-        .unwrap()
+        .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
