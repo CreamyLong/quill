@@ -18,10 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_updater::init(tauri::generate_context!()).unwrap_or_else(|e| {
-            eprintln!("Failed to initialize updater plugin: {}", e);
-            std::process::exit(1);
-        }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         // Single-instance: prevent multiple Quill desktop instances from running.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(win) = app.get_webview_window("main") {
