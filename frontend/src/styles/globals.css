@@ -160,6 +160,20 @@
   }
 }
 
+@keyframes particle-drift {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(var(--drift-x, 4px), var(--drift-y, -6px));
+    opacity: 0.2;
+  }
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -392,7 +406,7 @@
   }
 
   .golden-text {
-    background: linear-gradient(135deg, #d19e1d 0%, #e9c665 50%, #e3a812 100%);
+    background: linear-gradient(135deg, #059669 0%, #34d399 50%, #a7f3d0 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;

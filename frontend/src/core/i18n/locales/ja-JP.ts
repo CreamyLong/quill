@@ -89,16 +89,16 @@ export const jaJP: Translations = {
       "`skill-creator`を使って新しいスキルを段階的に作成します。まず、このスキルに何をさせたいですか？",
     addAttachments: "添付ファイルを追加",
     mode: "モード",
-    flashMode: "高速",
-    flashModeDescription: "高速で効率的ですが、精度が低い場合があります",
-    reasoningMode: "推論",
-    reasoningModeDescription:
+    swiftMode: "高速",
+    swiftModeDescription: "高速で効率的ですが、精度が低い場合があります",
+    reflectMode: "推論",
+    reflectModeDescription:
       "行動前に推論し、時間と精度のバランスを取ります",
-    proMode: "エージェント",
-    proModeDescription:
+    architectMode: "エージェント",
+    architectModeDescription:
       "推論、計画、実行を行い、より正確な結果を得られます。時間がかかる場合があります",
-    ultraMode: "エージェントクラスター",
-    ultraModeDescription:
+    swarmMode: "エージェントクラスター",
+    swarmModeDescription:
       "サブエージェントと作業を分割するプロモード。複雑なマルチステップタスクに最適です",
     reasoningEffort: "推論レベル",
     reasoningEffortMinimal: "最小",
@@ -483,6 +483,7 @@ export const jaJP: Translations = {
     title: "設定",
     description: "Quillの表示と動作を調整します。",
     sections: {
+      models: "Models",
       account: "アカウント",
       appearance: "外観",
       channels: "チャネル",

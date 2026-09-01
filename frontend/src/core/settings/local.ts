@@ -42,7 +42,7 @@ export interface LocalSettings {
     | "reasoning_effort"
   > & {
     model_name?: string | undefined;
-    mode: "flash" | "thinking" | "pro" | "ultra" | undefined;
+    mode: "swift" | "reflect" | "architect" | "swarm" | undefined;
     reasoning_effort?: "minimal" | "low" | "medium" | "high";
     /** Default working directory for new conversations (optional). */
     workspace_directory?: string;

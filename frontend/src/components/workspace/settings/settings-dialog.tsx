@@ -2,6 +2,7 @@
 
 import {
   BellIcon,
+  BrainIcon,
   GlobeIcon,
   InfoIcon,
   PaletteIcon,
@@ -20,11 +21,13 @@ import { AboutSettingsPage } from "@/components/workspace/settings/about-setting
 import { AccountSettingsPage } from "@/components/workspace/settings/account-settings-page";
 import { AppearanceSettingsPage } from "@/components/workspace/settings/appearance-settings-page";
 import { CommunityToolsSettingsPage } from "@/components/workspace/settings/community-tools-settings-page";
+import { ModelsSettingsPage } from "@/components/workspace/settings/models-settings-page";
 import { NotificationSettingsPage } from "@/components/workspace/settings/notification-settings-page";
 import { useI18n } from "@/core/i18n/hooks";
 import { cn } from "@/lib/utils";
 
 type SettingsSection =
+  | "models"
   | "account"
   | "appearance"
   | "communityTools"
@@ -49,6 +52,11 @@ export function SettingsDialog(props: SettingsDialogProps) {
 
   const sections = useMemo(
     () => [
+      {
+        id: "models",
+        label: t.settings.sections.models,
+        icon: BrainIcon,
+      },
       {
         id: "account",
         label: t.settings.sections.account,
@@ -76,6 +84,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
       },
     ],
     [
+      t.settings.sections.models,
       t.settings.sections.account,
       t.settings.sections.appearance,
       t.settings.sections.communityTools,
@@ -89,7 +98,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
       onOpenChange={(open) => props.onOpenChange?.(open)}
     >
       <DialogContent
-        className="flex h-[75vh] max-h-[calc(100vh-2rem)] flex-col sm:max-w-5xl md:max-w-6xl"
+        className="flex h-[80vh] max-h-[calc(100vh-3rem)] flex-col sm:max-w-4xl md:max-w-5xl"
         aria-describedby={undefined}
       >
         <DialogHeader className="gap-1">
@@ -125,6 +134,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
           </nav>
           <ScrollArea className="h-full min-h-0 rounded-lg border">
             <div className="space-y-8 p-6">
+              {activeSection === "models" && <ModelsSettingsPage />}
               {activeSection === "account" && <AccountSettingsPage />}
               {activeSection === "appearance" && <AppearanceSettingsPage />}
               {activeSection === "communityTools" && <CommunityToolsSettingsPage />}

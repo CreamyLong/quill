@@ -89,17 +89,17 @@ export const enUS: Translations = {
       "We're going to build a new skill step by step with `skill-creator`. To start, what do you want this skill to do?",
     addAttachments: "Add attachments",
     mode: "Mode",
-    flashMode: "Fast",
-    flashModeDescription: "Fast and efficient, but may not be accurate",
-    reasoningMode: "Reasoning",
-    reasoningModeDescription:
-      "Reasoning before action, balance between time and accuracy",
-    proMode: "Agent",
-    proModeDescription:
-      "Reasoning, planning and executing, get more accurate results, may take more time",
-    ultraMode: "Agent Cluster",
-    ultraModeDescription:
-      "Pro mode with subagents to divide work; best for complex multi-step tasks",
+    swiftMode: "Swift",
+    swiftModeDescription: "Quick responses for simple tasks",
+    reflectMode: "Reflect",
+    reflectModeDescription:
+      "Deep reasoning before action, balances time and accuracy",
+    architectMode: "Architect",
+    architectModeDescription:
+      "Plans and executes multi-step tasks with precision",
+    swarmMode: "Swarm",
+    swarmModeDescription:
+      "Coordinates multiple sub-agents for complex parallel work",
     reasoningEffort: "Reasoning Effort",
     reasoningEffortMinimal: "Minimal",
     reasoningEffortMinimalDescription: "Retrieval + Direct Output",
@@ -476,6 +476,7 @@ export const enUS: Translations = {
     title: "Settings",
     description: "Adjust how Quill looks and behaves for you.",
     sections: {
+      models: "Models",
       account: "Account",
       appearance: "Appearance",
       channels: "Channels",

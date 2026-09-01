@@ -89,16 +89,16 @@ export const ruRU: Translations = {
       "Мы будем создавать новый навык шаг за шагом с помощью `skill-creator`. Для начала, что должен делать этот навык?",
     addAttachments: "Добавить вложения",
     mode: "Режим",
-    flashMode: "Быстрый",
-    flashModeDescription: "Быстрый и эффективный, но может быть неточным",
-    reasoningMode: "Рассуждение",
-    reasoningModeDescription:
+    swiftMode: "Быстрый",
+    swiftModeDescription: "Быстрый и эффективный, но может быть неточным",
+    reflectMode: "Рассуждение",
+    reflectModeDescription:
       "Рассуждение перед действием, баланс между временем и точностью",
-    proMode: "Агент",
-    proModeDescription:
+    architectMode: "Агент",
+    architectModeDescription:
       "Рассуждение, планирование и выполнение, более точные результаты, может занять больше времени",
-    ultraMode: "Кластер агентов",
-    ultraModeDescription:
+    swarmMode: "Кластер агентов",
+    swarmModeDescription:
       "Профессиональный режим с субагентами для разделения работы; лучше всего подходит для сложных многошаговых задач",
     reasoningEffort: "Усилие рассуждения",
     reasoningEffortMinimal: "Минимальное",
@@ -479,6 +479,7 @@ export const ruRU: Translations = {
     title: "Настройки",
     description: "Настройте внешний вид и поведение Quill под себя.",
     sections: {
+      models: "Models",
       account: "Аккаунт",
       appearance: "Внешний вид",
       channels: "Каналы",

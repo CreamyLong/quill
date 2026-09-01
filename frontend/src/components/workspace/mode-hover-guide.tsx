@@ -5,23 +5,23 @@ import type { Translations } from "@/core/i18n/locales/types";
 
 import { Tooltip } from "./tooltip";
 
-export type AgentMode = "flash" | "thinking" | "pro" | "ultra";
+export type AgentMode = "swift" | "reflect" | "architect" | "swarm";
 
 function getModeLabelKey(
   mode: AgentMode,
 ): keyof Pick<
   Translations["inputBox"],
-  "flashMode" | "reasoningMode" | "proMode" | "ultraMode"
+  "swiftMode" | "reflectMode" | "architectMode" | "swarmMode"
 > {
   switch (mode) {
-    case "flash":
-      return "flashMode";
-    case "thinking":
-      return "reasoningMode";
-    case "pro":
-      return "proMode";
-    case "ultra":
-      return "ultraMode";
+    case "swift":
+      return "swiftMode";
+    case "reflect":
+      return "reflectMode";
+    case "architect":
+      return "architectMode";
+    case "swarm":
+      return "swarmMode";
   }
 }
 
@@ -29,20 +29,20 @@ function getModeDescriptionKey(
   mode: AgentMode,
 ): keyof Pick<
   Translations["inputBox"],
-  | "flashModeDescription"
-  | "reasoningModeDescription"
-  | "proModeDescription"
-  | "ultraModeDescription"
+  | "swiftModeDescription"
+  | "reflectModeDescription"
+  | "architectModeDescription"
+  | "swarmModeDescription"
 > {
   switch (mode) {
-    case "flash":
-      return "flashModeDescription";
-    case "thinking":
-      return "reasoningModeDescription";
-    case "pro":
-      return "proModeDescription";
-    case "ultra":
-      return "ultraModeDescription";
+    case "swift":
+      return "swiftModeDescription";
+    case "reflect":
+      return "reflectModeDescription";
+    case "architect":
+      return "architectModeDescription";
+    case "swarm":
+      return "swarmModeDescription";
   }
 }
 

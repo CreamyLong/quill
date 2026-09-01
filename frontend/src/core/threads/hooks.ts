@@ -1377,16 +1377,16 @@ export function useThreadStream({
               configurable: {
                 ...extraContext,
                 ...context,
-                thinking_enabled: context.mode !== "flash",
-                is_plan_mode: context.mode === "pro" || context.mode === "ultra",
-                subagent_enabled: context.mode === "ultra",
+                thinking_enabled: context.mode !== "swift",
+                is_plan_mode: context.mode === "architect" || context.mode === "swarm",
+                subagent_enabled: context.mode === "swarm",
                 reasoning_effort:
                   context.reasoning_effort ??
-                  (context.mode === "ultra"
+                  (context.mode === "swarm"
                     ? "high"
-                    : context.mode === "pro"
+                    : context.mode === "architect"
                       ? "medium"
-                      : context.mode === "thinking"
+                      : context.mode === "reflect"
                         ? "low"
                         : "minimal"),
                 thread_id: threadId,
@@ -1400,16 +1400,16 @@ export function useThreadStream({
             context: {
               ...extraContext,
               ...context,
-              thinking_enabled: context.mode !== "flash",
-              is_plan_mode: context.mode === "pro" || context.mode === "ultra",
-              subagent_enabled: context.mode === "ultra",
+              thinking_enabled: context.mode !== "swift",
+              is_plan_mode: context.mode === "architect" || context.mode === "swarm",
+              subagent_enabled: context.mode === "swarm",
               reasoning_effort:
                 context.reasoning_effort ??
-                (context.mode === "ultra"
+                (context.mode === "swarm"
                   ? "high"
-                  : context.mode === "pro"
+                  : context.mode === "architect"
                     ? "medium"
-                    : context.mode === "thinking"
+                    : context.mode === "reflect"
                       ? "low"
                       : "minimal"),
               thread_id: threadId,
@@ -1504,16 +1504,16 @@ export function useThreadStream({
             recursion_limit: 1000,
             configurable: {
               ...context,
-              thinking_enabled: context.mode !== "flash",
-              is_plan_mode: context.mode === "pro" || context.mode === "ultra",
-              subagent_enabled: context.mode === "ultra",
+              thinking_enabled: context.mode !== "swift",
+              is_plan_mode: context.mode === "architect" || context.mode === "swarm",
+              subagent_enabled: context.mode === "swarm",
               reasoning_effort:
                 context.reasoning_effort ??
-                (context.mode === "ultra"
+                (context.mode === "swarm"
                   ? "high"
-                  : context.mode === "pro"
+                  : context.mode === "architect"
                     ? "medium"
-                    : context.mode === "thinking"
+                    : context.mode === "reflect"
                       ? "low"
                       : undefined),
               thread_id: threadId,
@@ -1521,16 +1521,16 @@ export function useThreadStream({
           },
           context: {
             ...context,
-            thinking_enabled: context.mode !== "flash",
-            is_plan_mode: context.mode === "pro" || context.mode === "ultra",
-            subagent_enabled: context.mode === "ultra",
+            thinking_enabled: context.mode !== "swift",
+            is_plan_mode: context.mode === "architect" || context.mode === "swarm",
+            subagent_enabled: context.mode === "swarm",
             reasoning_effort:
               context.reasoning_effort ??
-              (context.mode === "ultra"
+              (context.mode === "swarm"
                 ? "high"
-                : context.mode === "pro"
+                : context.mode === "architect"
                   ? "medium"
-                  : context.mode === "thinking"
+                  : context.mode === "reflect"
                     ? "low"
                     : undefined),
             thread_id: threadId,
