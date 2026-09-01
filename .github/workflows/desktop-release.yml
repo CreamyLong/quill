@@ -96,7 +96,9 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          pnpm build
+          # Disable Turbopack for production builds (has issues with
+          # dynamic filesystem access in mock routes)
+          TURBOPACK=0 pnpm build
 
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
@@ -164,7 +166,9 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          pnpm build
+          # Disable Turbopack for production builds (has issues with
+          # dynamic filesystem access in mock routes)
+          TURBOPACK=0 pnpm build
 
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
@@ -235,7 +239,9 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          pnpm build
+          # Disable Turbopack for production builds (has issues with
+          # dynamic filesystem access in mock routes)
+          TURBOPACK=0 pnpm build
 
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
