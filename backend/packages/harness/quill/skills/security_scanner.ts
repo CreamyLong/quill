@@ -13,6 +13,7 @@
 import { getAppConfig } from "../config/app_config.js";
 import type { AppConfig } from "../config/app_config.js";
 import { SKILL_MD_FILE } from "./types.js";
+import { deterministicScan } from "./deterministic_scan.js";
 
 /** Result of a skill security scan. */
 export interface ScanResult {
@@ -122,6 +123,19 @@ export async function scanSkillContent(content: string, options: ScanSkillConten
   const executable = options.executable ?? false;
   const location = options.location ?? SKILL_MD_FILE;
 
+  // Phase 1: deterministic offline scan (DeerFlow SkillScan pattern).
+  // Blocks CRITICAL findings immediately without an LLM call.
+  const detResult = deterministicScan(content, { executable });
+  if (detResult.blocked) {
+    const criticals = detResult.findings.filter((f) => f.severity === "critical");
+    const detail = criticals
+      .map((f) => `[${f.ruleId}] ${f.message}${f.line ? ` (line ${f.line})` : ""}`)
+      .join("; ");
+    return { decision: "block", reason: `Deterministic scan: ${detail}` };
+  }
+
+  // Phase 2: LLM-based scan for contextual review of warnings and
+  // borderline cases that the deterministic rules can't judge.
   const rubric =
     "You are a security reviewer for AI agent skills. " +
     "Classify the content as allow, warn, or block. " +

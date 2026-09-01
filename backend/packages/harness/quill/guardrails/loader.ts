@@ -20,6 +20,7 @@ import {
   type AllowlistProviderOptions,
   type CommandPolicyProviderOptions,
 } from "./builtin.js";
+import { AnnotationProvider, type AnnotationProviderOptions } from "./annotation_provider.js";
 import type { GuardrailDecision, GuardrailProvider, GuardrailRequest } from "./provider.js";
 import { guardrailMiddleware, type GuardrailMiddlewareOptions } from "./middleware.js";
 import { resolveVariable, ValueError } from "../reflection/resolvers.js";
@@ -36,6 +37,9 @@ const BUILTIN_PROVIDERS: Record<string, new (config: Record<string, unknown>) =>
     config: Record<string, unknown>
   ) => GuardrailProvider,
   "quill.guardrails.builtin:CommandPolicyProvider": CommandPolicyProvider as unknown as new (
+    config: Record<string, unknown>
+  ) => GuardrailProvider,
+  "quill.guardrails.annotation_provider:AnnotationProvider": AnnotationProvider as unknown as new (
     config: Record<string, unknown>
   ) => GuardrailProvider,
 };
@@ -120,5 +124,5 @@ export function createGuardrailMiddleware(
 }
 
 // Re-export for convenience.
-export type { AllowlistProviderOptions, CommandPolicyProviderOptions };
-export { AllowlistProvider, CommandPolicyProvider };
+export type { AllowlistProviderOptions, CommandPolicyProviderOptions, AnnotationProviderOptions };
+export { AllowlistProvider, CommandPolicyProvider, AnnotationProvider };

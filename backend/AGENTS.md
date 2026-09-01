@@ -446,6 +446,58 @@ Port of OpenAI Codex's Plan.md/Implement.md/Documentation.md pattern. Provides r
   - `manager.ts` — `PlanningArtifactManager` with CRUD, milestone/task status tracking, progress summary, persist/load
 - **Features**: Markdown serialization, milestone dependencies, progress percentage, archival, disk persistence
 
+### Tool Annotations System (`packages/harness/quill/guardrails/annotations.ts`)
+
+Port of OpenAI Codex's tool annotations + the awesome-harness-engineering "Tool Annotations" best practice. Tools optionally declare safety properties that guardrail providers consume for authorization decisions.
+
+- **Four hints** (mirror the MCP tool annotations spec):
+  1. `readOnlyHint` — Tool only reads, never writes (lowest risk)
+  2. `destructiveHint` — Tool may irreversibly destroy/overwrite data
+  3. `idempotentHint` — Repeated calls produce the same effect as a single call
+  4. `openWorldHint` — Tool interacts with external systems (network, APIs)
+- **Components**:
+  - `annotations.ts` — `ToolAnnotations`, `computeRiskLevel()`, `normalizeAnnotations()`
+  - `annotation_provider.ts` — `AnnotationProvider` (risk-level-based authorization)
+  - `annotation_middleware.ts` — `MemoryAnnotationRegistry`, `attachAnnotations()`, global registry
+- **Risk levels**: `low` (readOnly) → `medium` (idempotent/unknown) → `high` (openWorld) → `critical` (destructive)
+- **Integration**: `GuardrailRequest.metadata` carries annotations; `AnnotationProvider` registered in `loader.ts` as `quill.guardrails.annotation_provider:AnnotationProvider`
+
+### Deterministic Skill Security Scanner (`packages/harness/quill/skills/deterministic_scan.ts`)
+
+Port of DeerFlow 2.0's SkillScan Phase 1. Runs deterministic pattern matching against skill content *before* the LLM-based scanner, blocking CRITICAL findings immediately without an LLM call.
+
+- **Rule set**: 8 CRITICAL rules (private keys, API tokens, prompt injection, exfiltration, unsafe shell) + 3 WARNING rules (external API refs, file writes, env access)
+- **Design**: Zero external dependencies, deterministic work budget (`maxFindings`), fail-closed on CRITICAL match
+- **Integration**: `security_scanner.ts` calls `deterministicScan()` first; only warnings/borderline cases fall through to the LLM scanner
+- **Evidence tracking**: Reports line number and truncated evidence snippet per finding
+
+### Heartbeat System (`packages/harness/quill/scheduling/heartbeat.ts`)
+
+Port of OpenClaw's heartbeat + monitor scratch pattern. Runs periodic proactive agent turns in the main session to check whether anything needs attention.
+
+- **Monitor scratch**: A private checklist document (persistent, survives restarts) that the agent reads and updates during heartbeat turns
+- **Response contract**: `NO_REPLY` when nothing needs attention (cost control); alert text otherwise
+- **Cost controls**: Isolated sessions (fresh session, no history), light context (skip workspace bootstrap), cheaper model override
+- **Active hours**: Time-window restriction with overnight window support (e.g., 22:00–06:00)
+- **Suppression**: Consecutive NO_REPLY limit to stop firing when nothing needs attention
+- **Components**:
+  - `heartbeat.ts` — `HeartbeatManager`, `isInActiveHours()`, `HEARTBEAT_PROMPT`
+  - `heartbeat_config.ts` — `HeartbeatConfig`, `buildHeartbeatConfig()`
+
+### Memory Consolidation / Dreaming (`packages/harness/quill/agents/memory/consolidation.ts`)
+
+Port of OpenClaw's three-phase dreaming system. Background memory consolidation that promotes short-term signals to durable long-term memory.
+
+- **Three phases**:
+  1. **Light** — Surface recent facts that appear frequently (high access count)
+  2. **REM** — Cluster related facts by category, identify contradictions (duplicates)
+  3. **Deep** — Promote high-scoring facts, archive low-scoring ones, merge duplicates
+- **Composite scoring**: Weighted sum of relevance (25%), frequency (20%), query diversity (15%), recency (15%), consolidation (10%), conceptual richness (15%)
+- **Recency decay**: Exponential with 30-day half-life
+- **DREAMS.md diary**: Human-readable record of each consolidation cycle
+- **Components**:
+  - `consolidation.ts` — `consolidate()`, `computeCompositeScore()`, `formatDreamEntry()`
+
 ### MCP System (`packages/harness/quill/mcp/`)
 
 - Uses `langchain-mcp-adapters` `MultiServerMCPClient` for multi-server management
