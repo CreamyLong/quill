@@ -16,7 +16,7 @@ const withNextra = nextra({});
 
 /** @type {import("next").NextConfig} */
 const config = {
-  distDir: ".next-build",
+  distDir: "../../.quill-desktop-dist",
   output:
     process.env.NEXT_CONFIG_BUILD_OUTPUT === "standalone"
       ? "standalone"
