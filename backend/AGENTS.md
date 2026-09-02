@@ -42,6 +42,8 @@ quill/
 │   │           │   ├── builtins/      # general-purpose, bash agents
 │   │           │   ├── executor.py    # Background execution engine
 │   │           │   └── registry.py    # Agent registry
+│   │           ├── tools/discovery/   # Budgeted tool catalog (OpenWork CodeMode pattern)
+│   │           ├── tools/receipts/    # Tool receipt verification (DeerFlow pattern)
 │   │           ├── tools/builtins/    # Built-in tools (present_files, ask_clarification, view_image, review_skill_package)
 │   │           ├── mcp/               # MCP integration (tools, cache, client)
 │   │           ├── mcp_tasks/         # Durable MCP task runtime (lease-based execution)
@@ -53,6 +55,9 @@ quill/
 │   │           ├── planning_artifacts/      # Plan.md/Implement.md for long-horizon tasks
 │   │           ├── config/            # Configuration system (app, model, sandbox, tool, etc.)
 │   │           ├── community/         # Community tools (search/fetch/scrape, image search, AIO sandbox)
+│   │           ├── evaluation/        # Agent evaluation + benchmark framework (DeepSeek-harness pattern)
+│   │           ├── multi_agent/       # Multi-agent coordination patterns (CrewAI/AutoGen/Tower)
+│   │           ├── workflows/         # DAG-based agent orchestration (CrewAI Flows/DeerFlow)
 │   │           ├── reflection/        # Dynamic module loading (resolve_variable, resolve_class)
 │   │           ├── utils/             # Utilities (network, readability)
 │   │           └── client.py          # Embedded Python client (QuillClient)
@@ -988,6 +993,116 @@ For models with `supports_vision: true`:
 - `ViewImageMiddleware` processes images in conversation
 - `view_image_tool` added to agent's toolset
 - Images automatically converted to base64 and injected into state
+
+## New Modules (2026-09-03)
+
+This section documents the new modules added as part of the harness framework
+comparison and feature update. Each module ports patterns from leading
+agent frameworks (DeerFlow, CrewAI, AutoGen, OpenAI Codex, Kimi Code, OpenWork,
+OpenClaw, DeepSeek Harness, Hermes Agent) into Quill's TypeScript runtime.
+
+### Evaluation Framework (`packages/harness/quill/evaluation/`)
+
+Port of DeepSeek-harness's evaluation model + SWE-agent's task structure +
+the awesome-harness-engineering "pluggable scorer registry" and "pass^k
+methodology" best practices.
+
+**Purpose**: Benchmark agent performance against defined tasks with pluggable
+scorers. Supports pass^k trials for statistical confidence.
+
+**Components**:
+- `types.ts` — Core types: `EvalTask`, `EvalTaskResult`, `EvalScore`, `EvalScorer`, `EvalReport`, `BenchmarkSuite`
+- `runner.ts` — `runBenchmark()` orchestrates task execution + scoring + report aggregation
+- `scorers/exact_match.ts` — `exactMatchScorer` — deterministic string comparison
+- `scorers/contains.ts` — `containsScorer` — substring check
+- `scorers/regex.ts` — `regexScorer` — regex pattern matching
+- `scorers/artifact_exists.ts` — `artifactExistsScorer` — verifies expected files were produced
+- `scorers/artifact_content.ts` — `artifactContentScorer` — verifies artifact content
+- `scorers/llm_judge.ts` — `createLlmJudgeScorer()` — LLM-as-judge scoring
+- `scorers/composite.ts` — `compositeScore()` — combines multiple scorers with weights
+- `adapters/quill_runner.ts` — `createQuillRunner()` — bridges eval framework to QuillClient
+- `__tests__/scorers.test.ts` — Unit tests for all built-in scorers
+- `__tests__/runner.test.ts` — Unit tests for the benchmark runner
+
+**Scoring types**: `exact_match`, `contains`, `regex`, `artifact_exists`, `artifact_content`, `llm_judge`, `custom`, `composite`
+
+**Configuration** (`config.yaml` → `evaluation`):
+- `enabled` — Master switch
+- `defaultTokenBudget` — Token budget for LLM judge scorers
+- `trialsPerTask` — pass^k trials for statistical confidence
+- `maxConcurrency` — Parallel task execution limit
+
+### Multi-Agent Coordination (`packages/harness/quill/multi_agent/`)
+
+Port of CrewAI's role-based crews + AutoGen's group chat patterns +
+Kimi Code's Tower protocol + LangGraph's supervisor topology.
+
+**Purpose**: Peer-to-peer agent orchestration patterns that extend Quill's
+existing subagent system (single parent→child delegation) with richer
+coordination: supervisor routing, round-robin turns, and handoff chains.
+
+**Components**:
+- `types.ts` — `CoordAgent`, `AgentMessage`, `HandoffMessage`, `Mission`, `CoordinationResult`, `AgentRunner`
+- `coordinators/supervisor.ts` — `runSupervisorCoordination()` — one agent routes to workers
+- `coordinators/round_robin.ts` — `runRoundRobin()` — agents take turns with shared history
+- `coordinators/handoff.ts` — `runHandoffChain()` — agents signal transitions to one another
+
+**Coordination strategies**:
+- **Supervisor**: One agent dynamically routes tasks to workers (best for task decomposition)
+- **RoundRobin**: Agents take turns responding to shared history (best for reflection, peer review)
+- **Handoff**: Agents signal transitions to one another (best for multi-stage pipelines)
+
+### Workflow System (`packages/harness/quill/workflows/`)
+
+Port of CrewAI Flows' event-driven patterns + DeerFlow's coordinator-
+researcher-writer workflow + LangGraph's subgraph composition.
+
+**Purpose**: DAG-based agent orchestration. A workflow is a directed acyclic
+graph of nodes (agents or functions) with automatic execution ordering,
+parallel execution, state passing, conditional branching, and retry.
+
+**Components**:
+- `types.ts` — `WorkflowNode`, `WorkflowEdge`, `WorkflowDefinition`, `WorkflowState`, `WorkflowResult`
+- `engine.ts` — `executeWorkflow()` — DAG execution engine with parallel execution + retry
+- `__tests__/` — (to be added)
+
+**Node kinds**: `agent` (runs an agent), `function` (pure transform), `router` (conditional branching)
+
+### Tool Discovery (`packages/harness/quill/tools/discovery/`)
+
+Port of OpenWork CodeMode's budgeted catalog system.
+
+**Purpose**: When the tool catalog exceeds a token budget (e.g. hundreds of
+MCP tools), fair allocation across namespaces ensures every tool group is
+represented. A search mechanism lets agents discover more tools on demand.
+
+**Components**:
+- `budgeted_catalog.ts` — `BudgetedCatalog` class with round-robin, greedy, and priority allocation strategies
+- `estimateTokenCost()` — heuristic token cost estimation for tool schemas
+
+**Allocation strategies**:
+- `round_robin` — Each namespace gets one tool before any gets a second (fair representation)
+- `greedy` — Fill budget with largest namespaces first (fully describe a few)
+- `priority` — Use configured namespace priority ordering
+
+### Tool Receipts (`packages/harness/quill/tools/receipts/`)
+
+Port of DeerFlow 2.0's tool receipt system — the most valuable pattern
+from the framework comparison.
+
+**Purpose**: Deterministic verification layer for agent tool calls. Every
+tool call gets an immutable receipt. The agent can cite receipts in its
+output (e.g. "[r2 write_file]"), and citations can be verified
+deterministically — no LLM needed.
+
+**Components**:
+- `receipt.ts` — `createReceipt()`, `buildLedger()`, `renderLedger()`, `verifyCitations()`
+
+**Key features**:
+- Positional IDs (r1, r2, ...) assigned over the append-only message list
+- SHA-256 hashes of args and results for integrity verification
+- Ledger injection into model context with character budget
+- Citation verification: `[r2]` bare or `[r2 write_file]` anchored
 
 ## Code Style
 
