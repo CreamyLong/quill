@@ -298,8 +298,6 @@ export const enUS: Translations = {
     reportIssue: "Report an issue",
     contactUs: "Contact us",
     about: "About Quill",
-    logout: "Log out",
-    gatewayUnavailable: "Gateway is temporarily unavailable.",
     gatewayUnavailableRetrying: "Retrying in the background…",
   },
 
@@ -651,38 +649,6 @@ export const enUS: Translations = {
     acknowledge: {
       emptyTitle: "Acknowledgements",
       emptyDescription: "Credits and acknowledgements will show here.",
-    },
-  },
-  login: {
-    signInTitle: "Sign in to your account",
-    createAccountTitle: "Create a new account",
-    email: "Email",
-    emailPlaceholder: "you@example.com",
-    password: "Password",
-    passwordPlaceholder: "•••••••",
-    pleaseWait: "Please wait...",
-    signIn: "Sign In",
-    createAccount: "Create Account",
-    createAdminAccount: "Create admin account",
-    adminSetupRequiredTitle: "Administrator setup is required",
-    adminSetupRequiredDescription:
-      "Quill needs an administrator account before new regular accounts can be created.",
-    orContinueWith: "Or continue with",
-    ssoHint:
-      "If your account uses single sign-on, sign in with the option below instead.",
-    continueWith: (provider: string) => `Continue with ${provider}`,
-    noAccountSignUp: "Don't have an account? Sign up",
-    haveAccountSignIn: "Already have an account? Sign in",
-    backToHome: "← Back to home",
-    networkError: "Network error. Please try again.",
-    authFailed: "Authentication failed.",
-    errors: {
-      sso_failed: "SSO login failed. Please try again or use email login.",
-      sso_cancelled: "SSO login was cancelled.",
-      sso_account_exists:
-        "An account with this email already exists. Please sign in with your password or contact your administrator.",
-      sso_not_allowed:
-        "SSO login is not allowed for your account. Contact your administrator.",
     },
   },
 };

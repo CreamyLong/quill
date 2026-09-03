@@ -6,7 +6,6 @@ import {
   GlobeIcon,
   InfoIcon,
   PaletteIcon,
-  UserIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -18,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AboutSettingsPage } from "@/components/workspace/settings/about-settings-page";
-import { AccountSettingsPage } from "@/components/workspace/settings/account-settings-page";
 import { AppearanceSettingsPage } from "@/components/workspace/settings/appearance-settings-page";
 import { CommunityToolsSettingsPage } from "@/components/workspace/settings/community-tools-settings-page";
 import { ModelsSettingsPage } from "@/components/workspace/settings/models-settings-page";
@@ -28,7 +26,6 @@ import { cn } from "@/lib/utils";
 
 type SettingsSection =
   | "models"
-  | "account"
   | "appearance"
   | "communityTools"
   | "notification"
@@ -58,11 +55,6 @@ export function SettingsDialog(props: SettingsDialogProps) {
         icon: BrainIcon,
       },
       {
-        id: "account",
-        label: t.settings.sections.account,
-        icon: UserIcon,
-      },
-      {
         id: "appearance",
         label: t.settings.sections.appearance,
         icon: PaletteIcon,
@@ -85,7 +77,6 @@ export function SettingsDialog(props: SettingsDialogProps) {
     ],
     [
       t.settings.sections.models,
-      t.settings.sections.account,
       t.settings.sections.appearance,
       t.settings.sections.communityTools,
       t.settings.sections.notification,
@@ -135,7 +126,6 @@ export function SettingsDialog(props: SettingsDialogProps) {
           <ScrollArea className="h-full min-h-0 rounded-lg border">
             <div className="space-y-8 p-6">
               {activeSection === "models" && <ModelsSettingsPage />}
-              {activeSection === "account" && <AccountSettingsPage />}
               {activeSection === "appearance" && <AppearanceSettingsPage />}
               {activeSection === "communityTools" && <CommunityToolsSettingsPage />}
               {activeSection === "notification" && <NotificationSettingsPage />}

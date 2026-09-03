@@ -29,5 +29,3 @@ export { RUNS_TABLE, RUNS_DDL } from "../run/model.js";
 export type { RunRow } from "../run/model.js";
 export { THREADS_META_TABLE, THREADS_META_DDL } from "../thread_meta/model.js";
 export type { ThreadMetaRow } from "../thread_meta/model.js";
-export { USERS_TABLE, USERS_DDL } from "../user/model.js";
-export type { UserRow } from "../user/model.js";

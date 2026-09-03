@@ -321,7 +321,7 @@ fi
 if $DEV_MODE; then
     FRONTEND_CMD="pnpm run dev"
 else
-    FRONTEND_CMD="env BETTER_AUTH_SECRET=$(node -e 'console.log(require("crypto").randomBytes(16).toString("hex"))') pnpm run preview"
+    FRONTEND_CMD="pnpm run preview"
 fi
 
 # Runtime path defaults. Local `make dev` launches Gateway from `backend/`,

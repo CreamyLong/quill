@@ -301,8 +301,6 @@ export const jaJP: Translations = {
     reportIssue: "問題を報告",
     contactUs: "お問い合わせ",
     about: "Quillについて",
-    logout: "ログアウト",
-    gatewayUnavailable: "ゲートウェイは一時的に利用できません。",
     gatewayUnavailableRetrying: "バックグラウンドで再試行中…",
   },
 
@@ -658,39 +656,6 @@ export const jaJP: Translations = {
     acknowledge: {
       emptyTitle: "謝辞",
       emptyDescription: "クレジットと謝辞がここに表示されます。",
-    },
-  },
-  login: {
-    signInTitle: "アカウントにサインイン",
-    createAccountTitle: "新しいアカウントを作成",
-    email: "メール",
-    emailPlaceholder: "you@example.com",
-    password: "パスワード",
-    passwordPlaceholder: "•••••••",
-    pleaseWait: "お待ちください...",
-    signIn: "サインイン",
-    createAccount: "アカウントを作成",
-    createAdminAccount: "管理者アカウントを作成",
-    adminSetupRequiredTitle: "管理者設定が必要です",
-    adminSetupRequiredDescription:
-      "新しい一般アカウントを作成する前に、Quillには管理者アカウントが必要です。",
-    orContinueWith: "または次で続行",
-    ssoHint:
-      "アカウントがシングルサインオンを使用している場合は、代わりに以下のオプションでサインインしてください。",
-    continueWith: (provider: string) => `${provider}で続行`,
-    noAccountSignUp: "アカウントをお持ちでないですか？サインアップ",
-    haveAccountSignIn: "すでにアカウントをお持ちですか？サインイン",
-    backToHome: "← ホームに戻る",
-    networkError: "ネットワークエラー。もう一度お試しください。",
-    authFailed: "認証に失敗しました。",
-    errors: {
-      sso_failed:
-        "SSOログインに失敗しました。もう一度お試しするか、メールログインを使用してください。",
-      sso_cancelled: "SSOログインがキャンセルされました。",
-      sso_account_exists:
-        "このメールのアカウントは既に存在します。パスワードでサインインするか、管理者にお問い合わせください。",
-      sso_not_allowed:
-        "あなたのアカウントではSSOログインは許可されていません。管理者にお問い合わせください。",
     },
   },
 };

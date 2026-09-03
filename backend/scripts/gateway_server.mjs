@@ -95,7 +95,6 @@ import {
 } from "../dist/packages/harness/quill/skills/slash.js";
 import { buildChatModel, pickModelConfig } from "./model_factory.mjs";
 import { createSqliteThreadStore } from "./sqlite_store.mjs";
-import { createAuthStore } from "./auth_store.mjs";
 import { createMemoryStore } from "./memory_store.mjs";
 import { createSkillsStore } from "./skills_store.mjs";
 import { createAgentsStore } from "./agents_store.mjs";
@@ -878,7 +877,7 @@ const scheduledTaskStore = buildStore(
 );
 
 // --- Persistence ORM: initialize application schema ---
-// Schema includes users, threads_meta, runs, run_events, feedback, and
+// Schema includes threads_meta, runs, run_events, feedback, and
 // channel_connections. Ad-hoc stores remain functional during migration.
 try {
   initEngineFromConfig({
@@ -930,13 +929,6 @@ const { server, getThreadMetadata, stopScheduledTasks } = createGatewayServer({
   mcpConfig: appConfig.mcp ?? null,
   reloadMcp: reloadMcpTools,
   runCallbacks: tracingCallbacks,
-  auth: process.env.QUILL_AUTH_ENABLED === "1"
-    ? (() => {
-        const a = createAuthStore(path.resolve(QUILL_DIR, "auth.db"));
-        console.log("[gateway] real auth ENABLED (.scitops/auth.db)");
-        return a;
-      })()
-    : undefined,
   store: buildStore("SQLite thread store enabled (.scitops/threads.db)", () =>
     createSqliteThreadStore(path.resolve(QUILL_DIR, "threads.db")),
   ),

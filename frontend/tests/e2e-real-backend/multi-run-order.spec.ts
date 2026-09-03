@@ -35,25 +35,11 @@ test.describe("multi-run thread renders chronologically (replay, no API key)", (
   }) => {
     const uniq = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
     const threadId = `e2e-multi-run-${uniq}`;
-    const email = `e2e-${uniq}@example.com`;
-
-    // Register through the frontend origin (same-origin proxy) so the auth
-    // cookies are stored for localhost and forwarded to the gateway via the
-    // next.config rewrite — never cross-origin from the browser.
-    const reg = await context.request.post(`${APP}/api/v1/auth/register`, {
-      data: { email, password: "very-strong-password-123" },
-    });
-    expect(reg.status(), await reg.text()).toBe(201);
-
-    const cookies = await context.cookies();
-    const csrf = cookies.find((c) => c.name === "csrf_token")?.value;
-    expect(csrf, "register must set csrf_token cookie").toBeTruthy();
 
     // Seed two runs in one thread: run-1 (ALPHA) older, run-2 (OMEGA) newer, so
     // the real backend's list_by_thread returns them newest-first. No checkpoint
     // is seeded — that is the #3352 precondition.
     const seed = await context.request.post(`${APP}/api/test-only/seed-runs`, {
-      headers: { "X-CSRF-Token": csrf! },
       data: {
         thread_id: threadId,
         runs: [

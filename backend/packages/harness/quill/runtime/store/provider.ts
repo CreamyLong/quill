@@ -35,6 +35,8 @@ import {
 
 import { getAppConfig } from "../../config/app_config.js";
 import { resolvePath } from "../../config/paths.js";
+import type { DatabaseConfig } from "../../config/database_config.js";
+import { sqlitePath } from "../../config/database_config.js";
 import { ensureConfigLoaded, getCheckpointerConfig, type CheckpointerConfig } from "../checkpointer/provider.js";
 import { ensureSqliteParentDir, resolveSqliteConnStr } from "./_sqlite_utils.js";
 
@@ -269,7 +271,7 @@ export function getStore(): BaseStore {
   }
   ensureConfigLoaded();
 
-  const config = getCheckpointerConfig();
+  const config = resolveStoreConfig();
   if (config === null) {
     logger.warning(NO_CHECKPOINTER_WARNING);
     _store = new InMemoryStore();
@@ -300,6 +302,44 @@ export function resetStore(): void {
 // ---------------------------------------------------------------------------
 
 /**
+ * Resolve the effective store backend config.
+ *
+ * Priority:
+ * 1. Legacy `checkpointer:` section (if it has fields — section() returns {}
+ *    for missing keys, which must NOT be treated as a real config).
+ * 2. Unified `database:` section.
+ * 3. null (caller falls back to InMemoryStore).
+ */
+function resolveStoreConfig(): CheckpointerConfig | null {
+  const appConfig = getAppConfig();
+
+  // Legacy checkpointer config — only trust it if it actually has fields.
+  const cp = appConfig.checkpointer;
+  if (cp !== null && cp !== undefined && Object.keys(cp).length > 0) {
+    return {
+      type: (cp["type"] as CheckpointerConfig["type"]) ?? "memory",
+      connection_string:
+        (cp["connection_string"] as string | null | undefined) ??
+        (cp["connectionString"] as string | null | undefined) ??
+        null,
+    };
+  }
+
+  // Unified database config.
+  const db = appConfig.database as DatabaseConfig | null | undefined;
+  if (db !== null && db !== undefined && db.backend !== "memory") {
+    if (db.backend === "sqlite") {
+      return { type: "sqlite", connection_string: sqlitePath(db) };
+    }
+    if (db.backend === "postgres") {
+      return { type: "postgres", connection_string: db.postgresUrl || null };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Create a fresh Store and its cleanup callback.
  *
  * Unlike {@link getStore}, this does not cache the instance — each call builds a
@@ -307,18 +347,12 @@ export function resetStore(): void {
  * `InMemoryStore` when no checkpointer is configured in config.yaml.
  */
 export function storeContext(): StoreHandle {
-  const raw = getAppConfig().checkpointer;
-  if (raw === null || raw === undefined) {
+  const config = resolveStoreConfig();
+  if (config === null) {
     logger.warning(NO_CHECKPOINTER_WARNING);
     return { store: new InMemoryStore(), close: () => {} };
   }
-  return buildStore({
-    type: (raw["type"] as CheckpointerConfig["type"]) ?? "memory",
-    connection_string:
-      (raw["connection_string"] as string | null | undefined) ??
-      (raw["connectionString"] as string | null | undefined) ??
-      null,
-  });
+  return buildStore(config);
 }
 
 function safeJsonParse(text: string): unknown {

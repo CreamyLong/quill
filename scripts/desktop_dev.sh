@@ -87,8 +87,6 @@ else
 fi
 
 # ── Frontend ─────────────────────────────────────────────────────────────────
-# QUILL_AUTH_DISABLED=1 removes the login wall for the local desktop flow
-# (built-in mode; automatically inert when QUILL_ENV=production).
 
 frontend_url="http://127.0.0.1:${FRONTEND_PORT}"
 FRONTEND_PID=""
@@ -96,10 +94,9 @@ FRONTEND_PID=""
 if port_listening "$FRONTEND_PORT" && port_answers_http "$FRONTEND_PORT"; then
   echo "[desktop] reusing healthy frontend at $frontend_url"
 else
-  echo "[desktop] starting frontend on $FRONTEND_PORT (auth disabled for desktop) ..."
+  echo "[desktop] starting frontend on $FRONTEND_PORT ..."
   (cd "$ROOT_DIR/frontend" \
-    && QUILL_AUTH_DISABLED=1 \
-       QUILL_INTERNAL_GATEWAY_BASE_URL="$gateway_url" \
+    && QUILL_INTERNAL_GATEWAY_BASE_URL="$gateway_url" \
        pnpm exec next dev --turbo -p "$FRONTEND_PORT") &
   FRONTEND_PID=$!
 

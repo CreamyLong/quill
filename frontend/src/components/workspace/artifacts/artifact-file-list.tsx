@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { urlOfArtifact } from "@/core/artifacts/utils";
-import { useAuth } from "@/core/auth/AuthProvider";
 import { useI18n } from "@/core/i18n/hooks";
 import { installSkill, SkillRequestError } from "@/core/skills/api";
 import {
@@ -33,8 +32,7 @@ export function ArtifactFileList({
   threadId: string;
 }) {
   const { t } = useI18n();
-  const { user } = useAuth();
-  const isAdmin = user?.system_role === "admin";
+  const isAdmin = true;
   const { select: selectArtifact, setOpen } = useArtifacts();
   const [installingFile, setInstallingFile] = useState<string | null>(null);
 

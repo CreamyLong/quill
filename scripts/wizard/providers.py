@@ -23,7 +23,6 @@ class LLMProvider:
     # capability (e.g. MiniMax M3 supports vision but M2.7 is text-only). The
     # provider-level extra_config holds the default (default_model) capability.
     model_vision_overrides: dict[str, bool] = field(default_factory=dict)
-    auth_hint: str | None = None
     base_url_prompt: str | None = None
     model_prompt: str | None = None
 
@@ -233,7 +232,6 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "supports_thinking": True,
             "supports_vision": False,
         },
-        auth_hint="No API key is required. Ensure Ollama is running and the model is pulled.",
     ),
     LLMProvider(
         name="ollama_gemma",
@@ -252,7 +250,6 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "supports_thinking": True,
             "supports_vision": True,
         },
-        auth_hint="No API key is required. Ensure Ollama is running and the model is pulled.",
     ),
     LLMProvider(
         name="mimo",
@@ -437,19 +434,6 @@ LLM_PROVIDERS: list[LLMProvider] = [
         package=None,
         api_key_field="api_key",
         extra_config={"supports_thinking": True, "supports_reasoning_effort": True},
-        auth_hint="Uses existing Codex CLI auth from ~/.codex/auth.json",
-    ),
-    LLMProvider(
-        name="claude_code",
-        display_name="Claude Code OAuth",
-        description="Uses Claude Code local OAuth credentials",
-        use="quill.models.claude_provider:ClaudeChatModel",
-        models=["claude-sonnet-4-6", "claude-opus-4-1"],
-        default_model="claude-sonnet-4-6",
-        env_var=None,
-        package=None,
-        extra_config={"max_tokens": 4096, "supports_thinking": True},
-        auth_hint="Uses Claude Code OAuth credentials from your local machine",
     ),
     LLMProvider(
         name="other",

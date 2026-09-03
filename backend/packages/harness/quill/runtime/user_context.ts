@@ -1,23 +1,22 @@
 /**
- * Request-scoped user context for user-based authorization.
+ * Request-scoped user context for user isolation.
  *
- * This module holds the current authenticated user (set by the gateway's auth
- * middleware after a successful authentication). Repository methods read the
- * current user via a sentinel default parameter, letting routers stay free of
- * `user_id` boilerplate.
+ * This module holds the current user (always the default user in no-auth mode).
+ * Repository methods read the current user via a sentinel default parameter,
+ * letting routers stay free of `user_id` boilerplate.
  *
  * Three-state semantics for the repository `user_id` parameter (the consumer
  * side of this module lives in `quill.persistence.*`):
  *
- * - `AUTO` (module sentinel, default): read from the current user; throw a
- *   `RuntimeError`-equivalent if unset.
+ * - `AUTO` (module sentinel, default): read from the current user; falls back
+ *   to DEFAULT_USER_ID if unset.
  * - Explicit `string`: use the provided value, overriding the current user.
  * - Explicit `null`: no WHERE clause — used only by migration scripts and admin
  *   CLIs that intentionally bypass isolation.
  *
  * Dependency direction
  * --------------------
- * `persistence` (lower layer) reads from this module; `gateway.auth` (higher
+ * `persistence` (lower layer) reads from this module; `gateway` (higher
  * layer) writes to it. `CurrentUser` is defined here as a structural type so
  * that `persistence` never needs to import the concrete `User` class. Any
  * object with an `.id: string` attribute structurally satisfies it.
@@ -26,10 +25,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 /**
- * Structural type for the current authenticated user.
+ * Structural type for the current user.
  *
- * Any object with an `.id: string` attribute satisfies this type. Concrete
- * implementations live in `app.gateway.auth.models.User`.
+ * Any object with an `.id: string` attribute satisfies this type.
  */
 export interface CurrentUser {
   id: string;
@@ -84,21 +82,6 @@ export function getCurrentUser(): CurrentUser | null {
   return asyncLocalStorage.getStore() ?? _currentUser;
 }
 
-/**
- * Return the current user, or throw.
- *
- * Used by repository code that must not be called outside a request-authenticated
- * context. The error message is phrased so that a caller debugging a stack trace
- * can locate the offending code path.
- */
-export function requireCurrentUser(): CurrentUser {
-  const user = getCurrentUser();
-  if (user === null) {
-    throw new Error("repository accessed without user context");
-  }
-  return user;
-}
-
 // ---------------------------------------------------------------------------
 // Effective user_id helpers (filesystem isolation)
 // ---------------------------------------------------------------------------
@@ -108,7 +91,7 @@ export const DEFAULT_USER_ID = "default";
 /**
  * Return the current user's id as a string, or DEFAULT_USER_ID if unset.
  *
- * Unlike {@link requireCurrentUser} this never throws — it is designed for
+ * This never throws — it is designed for
  * filesystem-path resolution where a valid user bucket is always needed.
  */
 export function getEffectiveUserId(): string {
@@ -123,14 +106,13 @@ export function getEffectiveUserId(): string {
  * Single source of truth for a tool/middleware's effective user_id.
  *
  * Resolution order (most authoritative first):
- *   1. `runtime.context["user_id"]` — set by `inject_authenticated_user_context`
- *      in the gateway from the auth-validated `request.state.user`. This is the
- *      only source that survives boundaries where the current user may have been
- *      lost (background tasks scheduled outside the request task, worker pools,
- *      future cross-process drivers).
- *   2. The current user — set by the auth middleware at request entry.
- *   3. `DEFAULT_USER_ID` — last-resort fallback so unauthenticated
- *      CLI / migration / test paths keep working without raising.
+ *   1. `runtime.context["user_id"]` — set by the gateway from the run context.
+ *      This is the only source that survives boundaries where the current user
+ *      may have been lost (background tasks scheduled outside the request task,
+ *      worker pools, future cross-process drivers).
+ *   2. The current user — set at request entry.
+ *   3. `DEFAULT_USER_ID` — last-resort fallback so CLI / migration / test
+ *      paths keep working without raising.
  *
  * Tools that persist user-scoped state (custom agents, memory, uploads) MUST
  * call this instead of {@link getEffectiveUserId} directly so they benefit from
@@ -180,8 +162,9 @@ export const AUTO: AutoSentinel = AutoSentinel.instance;
  *
  * Three-state semantics:
  *
- * - {@link AUTO} (default): read from the current user; throw if no user is in
- *   context. This is the common case for request-scoped calls.
+ * - {@link AUTO} (default): read from the current user; falls back to
+ *   DEFAULT_USER_ID if no user is in context. This is the common case for
+ *   request-scoped calls.
  * - Explicit `string`: use the provided id verbatim, overriding any current
  *   user. Useful for tests and admin-override flows.
  * - Explicit `null`: no filter — the repository should skip the user_id WHERE
@@ -195,9 +178,7 @@ export function resolveUserId(
   if (value instanceof AutoSentinel) {
     const user = getCurrentUser();
     if (user === null) {
-      throw new Error(
-        `${methodName} called with user_id=AUTO but no user context is set; pass an explicit user_id, set the current user via auth middleware, or opt out with user_id=null for migration/CLI paths.`
-      );
+      return DEFAULT_USER_ID;
     }
     // Coerce to string at the boundary, honouring the documented return type.
     return String(user.id);

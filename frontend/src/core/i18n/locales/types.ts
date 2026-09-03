@@ -196,8 +196,6 @@ export interface Translations {
     reportIssue: string;
     contactUs: string;
     about: string;
-    logout: string;
-    gatewayUnavailable: string;
     gatewayUnavailableRetrying: string;
   };
 
@@ -524,33 +522,4 @@ export interface Translations {
     };
   };
 
-  // Login / Auth
-  login: {
-    signInTitle: string;
-    createAccountTitle: string;
-    email: string;
-    emailPlaceholder: string;
-    password: string;
-    passwordPlaceholder: string;
-    pleaseWait: string;
-    signIn: string;
-    createAccount: string;
-    createAdminAccount: string;
-    adminSetupRequiredTitle: string;
-    adminSetupRequiredDescription: string;
-    orContinueWith: string;
-    ssoHint: string;
-    continueWith: (provider: string) => string;
-    noAccountSignUp: string;
-    haveAccountSignIn: string;
-    backToHome: string;
-    networkError: string;
-    authFailed: string;
-    errors: {
-      sso_failed: string;
-      sso_cancelled: string;
-      sso_account_exists: string;
-      sso_not_allowed: string;
-    };
-  };
 }

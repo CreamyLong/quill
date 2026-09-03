@@ -16,13 +16,6 @@ export const MOCK_THREAD_ID = "00000000-0000-0000-0000-000000000001";
 export const MOCK_THREAD_ID_2 = "00000000-0000-0000-0000-000000000002";
 export const MOCK_RUN_ID = "00000000-0000-0000-0000-000000000099";
 
-const MOCK_AUTH_USER = {
-  id: "default",
-  email: "default@test.local",
-  system_role: "admin",
-  needs_setup: false,
-};
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -135,36 +128,6 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
     },
     status: "idle",
     values: { title: thread.title ?? "Untitled", goal: thread.goal ?? null },
-  });
-
-  // Auth — keep workspace tests independent from a real gateway session.
-  void page.route("**/api/v1/auth/me", (route) => {
-    if (route.request().method() === "GET") {
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(MOCK_AUTH_USER),
-      });
-    }
-    return route.fallback();
-  });
-
-  void page.route("**/api/v1/auth/setup-status", (route) => {
-    if (route.request().method() === "GET") {
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ needs_setup: false }),
-      });
-    }
-    return route.fallback();
-  });
-
-  void page.route("**/api/v1/auth/logout", (route) => {
-    if (route.request().method() === "POST") {
-      return route.fulfill({ status: 204 });
-    }
-    return route.fallback();
   });
 
   // Thread search — sidebar thread list & chats list page

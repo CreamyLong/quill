@@ -52,17 +52,6 @@ def run_llm_step(step_label: str = "Step 1/3") -> LLMStepResult:
         if provider.model_prompt:
             model_name = ask_text(provider.model_prompt, default=model_name)
 
-    if provider.auth_hint:
-        print_header(f"{step_label} · Authentication")
-        print_info(provider.auth_hint)
-        api_key = None
-        return LLMStepResult(
-            provider=provider,
-            model_name=model_name,
-            api_key=api_key,
-            base_url=base_url,
-        )
-
     print_header(f"{step_label} · Enter your API Key")
     if provider.env_var:
         api_key = ask_secret(f"{provider.env_var}")

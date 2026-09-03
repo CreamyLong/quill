@@ -298,8 +298,6 @@ export const frFR: Translations = {
     reportIssue: "Signaler un problème",
     contactUs: "Nous contacter",
     about: "À propos de Quill",
-    logout: "Se déconnecter",
-    gatewayUnavailable: "La passerelle est temporairement indisponible.",
     gatewayUnavailableRetrying: "Nouvelle tentative en arrière-plan…",
   },
 
@@ -651,38 +649,6 @@ export const frFR: Translations = {
     acknowledge: {
       emptyTitle: "Remerciements",
       emptyDescription: "Les crédits et remerciements s'afficheront ici.",
-    },
-  },
-  login: {
-    signInTitle: "Connectez-vous à votre compte",
-    createAccountTitle: "Créer un nouveau compte",
-    email: "E-mail",
-    emailPlaceholder: "vous@exemple.com",
-    password: "Mot de passe",
-    passwordPlaceholder: "•••••••",
-    pleaseWait: "Veuillez patienter...",
-    signIn: "Se connecter",
-    createAccount: "Créer un compte",
-    createAdminAccount: "Créer un compte administrateur",
-    adminSetupRequiredTitle: "La configuration d'un administrateur est requise",
-    adminSetupRequiredDescription:
-      "Quill a besoin d'un compte administrateur avant que de nouveaux comptes réguliers puissent être créés.",
-    orContinueWith: "Ou continuer avec",
-    ssoHint:
-      "Si votre compte utilise l'authentification unique, connectez-vous avec l'option ci-dessous.",
-    continueWith: (provider: string) => `Continuer avec ${provider}`,
-    noAccountSignUp: "Vous n'avez pas de compte ? Inscrivez-vous",
-    haveAccountSignIn: "Vous avez déjà un compte ? Connectez-vous",
-    backToHome: "← Retour à l'accueil",
-    networkError: "Erreur réseau. Veuillez réessayer.",
-    authFailed: "L'authentification a échoué.",
-    errors: {
-      sso_failed: "La connexion SSO a échoué. Veuillez réessayer ou utiliser la connexion par e-mail.",
-      sso_cancelled: "La connexion SSO a été annulée.",
-      sso_account_exists:
-        "Un compte avec cet e-mail existe déjà. Veuillez vous connecter avec votre mot de passe ou contacter votre administrateur.",
-      sso_not_allowed:
-        "La connexion SSO n'est pas autorisée pour votre compte. Contactez votre administrateur.",
     },
   },
 };

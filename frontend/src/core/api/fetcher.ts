@@ -1,5 +1,3 @@
-import { buildLoginUrl } from "@/core/auth/types";
-
 /** HTTP methods that the gateway's CSRFMiddleware checks. */
 export type StateChangingMethod = "POST" | "PUT" | "DELETE" | "PATCH";
 
@@ -49,9 +47,8 @@ export function readCsrfCookie(): string | null {
  *    403 if the header is missing — silently breaking every call site
  *    that uses raw ``fetch()`` instead of this wrapper.
  *
- * Auto-redirects to ``/login`` on 401. Caller-supplied headers are
- * preserved; the helper only ADDS the CSRF header when it isn't already
- * present, so explicit overrides win.
+ * Caller-supplied headers are preserved; the helper only ADDS the CSRF header
+ * when it isn't already present, so explicit overrides win.
  */
 export async function fetch(
   input: RequestInfo | string,
@@ -79,11 +76,6 @@ export async function fetch(
     headers,
     credentials: "include",
   });
-
-  if (res.status === 401) {
-    window.location.href = buildLoginUrl(window.location.pathname);
-    throw new Error("Unauthorized");
-  }
 
   return res;
 }

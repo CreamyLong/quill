@@ -298,8 +298,6 @@ export const esES: Translations = {
     reportIssue: "Informar de un problema",
     contactUs: "Contáctanos",
     about: "Acerca de Quill",
-    logout: "Cerrar sesión",
-    gatewayUnavailable: "La puerta de enlace no está disponible temporalmente.",
     gatewayUnavailableRetrying: "Reintentando en segundo plano…",
   },
 
@@ -651,38 +649,6 @@ export const esES: Translations = {
     acknowledge: {
       emptyTitle: "Agradecimientos",
       emptyDescription: "Los créditos y agradecimientos se mostrarán aquí.",
-    },
-  },
-  login: {
-    signInTitle: "Inicia sesión en tu cuenta",
-    createAccountTitle: "Crea una nueva cuenta",
-    email: "Correo electrónico",
-    emailPlaceholder: "tu@ejemplo.com",
-    password: "Contraseña",
-    passwordPlaceholder: "•••••••",
-    pleaseWait: "Por favor, espera...",
-    signIn: "Iniciar sesión",
-    createAccount: "Crear cuenta",
-    createAdminAccount: "Crear cuenta de administrador",
-    adminSetupRequiredTitle: "Se requiere configuración de administrador",
-    adminSetupRequiredDescription:
-      "Quill necesita una cuenta de administrador antes de que se puedan crear nuevas cuentas regulares.",
-    orContinueWith: "O continuar con",
-    ssoHint:
-      "Si tu cuenta usa inicio de sesión único, inicia sesión con la opción de abajo en su lugar.",
-    continueWith: (provider: string) => `Continuar con ${provider}`,
-    noAccountSignUp: "¿No tienes una cuenta? Regístrate",
-    haveAccountSignIn: "¿Ya tienes una cuenta? Inicia sesión",
-    backToHome: "← Volver al inicio",
-    networkError: "Error de red. Inténtalo de nuevo.",
-    authFailed: "Autenticación fallida.",
-    errors: {
-      sso_failed: "Inicio de sesión SSO fallido. Inténtalo de nuevo o usa el inicio de sesión por correo electrónico.",
-      sso_cancelled: "Inicio de sesión SSO cancelado.",
-      sso_account_exists:
-        "Ya existe una cuenta con este correo electrónico. Inicia sesión con tu contraseña o contacta con tu administrador.",
-      sso_not_allowed:
-        "El inicio de sesión SSO no está permitido para tu cuenta. Contacta con tu administrador.",
     },
   },
 };

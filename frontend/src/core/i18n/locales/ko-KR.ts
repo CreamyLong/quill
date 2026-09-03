@@ -223,8 +223,6 @@ export const koKR: Translations = {
     reportIssue: "이슈 보고",
     contactUs: "문의하기",
     about: "Quill 정보",
-    logout: "로그아웃",
-    gatewayUnavailable: "게이트웨이를 일시적으로 사용할 수 없습니다.",
     gatewayUnavailableRetrying: "백그라운드에서 재시도 중…",
   },
 
@@ -548,33 +546,4 @@ export const koKR: Translations = {
     },
   },
 
-  // Login / Auth
-  login: {
-    signInTitle: "계정에 로그인",
-    createAccountTitle: "새 계정 생성",
-    email: "이메일",
-    emailPlaceholder: "you@example.com",
-    password: "비밀번호",
-    passwordPlaceholder: "•••••••",
-    pleaseWait: "잠시만 기다려주세요...",
-    signIn: "로그인",
-    createAccount: "계정 생성",
-    createAdminAccount: "관리자 계정 생성",
-    adminSetupRequiredTitle: "관리자 설정이 필요합니다",
-    adminSetupRequiredDescription: "Quill에서 새 일반 계정을 생성하려면 관리자 계정이 필요합니다.",
-    orContinueWith: "또는 다음으로 계속",
-    ssoHint: "계정에 단일 로그인을 사용하는 경우 아래 옵션으로 로그인하세요.",
-    continueWith: (provider: string) => `${provider}으로 계속`,
-    noAccountSignUp: "계정이 없으신가요? 가입하기",
-    haveAccountSignIn: "이미 계정이 있으신가요? 로그인",
-    backToHome: "← 홈으로 돌아가기",
-    networkError: "네트워크 오류. 다시 시도하세요.",
-    authFailed: "인증에 실패했습니다.",
-    errors: {
-      sso_failed: "SSO 로그인에 실패했습니다. 다시 시도하거나 이메일 로그인을 사용하세요.",
-      sso_cancelled: "SSO 로그인이 취소되었습니다.",
-      sso_account_exists: "이 이메일을 가진 계정이 이미 존재합니다. 비밀번호로 로그인하거나 관리자에게 문의하세요.",
-      sso_not_allowed: "SSO 로그인이 허용되지 않은 계정입니다. 관리자에게 문의하세요.",
-    },
-  },
 };

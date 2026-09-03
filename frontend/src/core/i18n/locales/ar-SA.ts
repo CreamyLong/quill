@@ -299,8 +299,6 @@ export const arSA: Translations = {
     reportIssue: "الإبلاغ عن مشكلة",
     contactUs: "اتصل بنا",
     about: "حول Quill",
-    logout: "تسجيل الخروج",
-    gatewayUnavailable: "البوابة غير متاحة مؤقتاً.",
     gatewayUnavailableRetrying: "إعادة المحاولة في الخلفية…",
   },
 
@@ -692,38 +690,6 @@ export const arSA: Translations = {
     acknowledge: {
       emptyTitle: "الإقرارات",
       emptyDescription: "ستظهر هنا الشكر والإقرارات.",
-    },
-  },
-  login: {
-    signInTitle: "تسجيل الدخول إلى حسابك",
-    createAccountTitle: "إنشاء حساب جديد",
-    email: "البريد الإلكتروني",
-    emailPlaceholder: "you@example.com",
-    password: "كلمة المرور",
-    passwordPlaceholder: "•••••••",
-    pleaseWait: "يرجى الانتظار...",
-    signIn: "تسجيل الدخول",
-    createAccount: "إنشاء حساب",
-    createAdminAccount: "إنشاء حساب مسؤول",
-    adminSetupRequiredTitle: "إعداد المسؤول مطلوب",
-    adminSetupRequiredDescription:
-      "يحتاج Quill إلى حساب مسؤول قبل إنشاء حسابات عادية جديدة.",
-    orContinueWith: "أو تابع باستخدام",
-    ssoHint:
-      "إذا كان حسابك يستخدم تسجيل الدخول الموحد، سجل الدخول باستخدام الخيار أدناه بدلاً من ذلك.",
-    continueWith: (provider: string) => `المتابعة باستخدام ${provider}`,
-    noAccountSignUp: "ليس لديك حساب؟ سجل الآن",
-    haveAccountSignIn: "لديك حساب بالفعل؟ سجل الدخول",
-    backToHome: "← العودة إلى الرئيسية",
-    networkError: "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
-    authFailed: "فشل المصادقة.",
-    errors: {
-      sso_failed: "فشل تسجيل الدخول عبر SSO. يرجى المحاولة مرة أخرى أو استخدام تسجيل الدخول بالبريد الإلكتروني.",
-      sso_cancelled: "تم إلغاء تسجيل الدخول عبر SSO.",
-      sso_account_exists:
-        "يوجد حساب بهذا البريد الإلكتروني بالفعل. يرجى تسجيل الدخول بكلمة المرور أو الاتصال بالمسؤول.",
-      sso_not_allowed:
-        "تسجيل الدخول عبر SSO غير مسموح لحسابك. اتصل بالمسؤول.",
     },
   },
 };

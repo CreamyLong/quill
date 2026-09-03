@@ -23,7 +23,6 @@ import { RUN_EVENTS_DDL } from "./models/run_event.js";
 import { RUNS_DDL } from "./run/model.js";
 import { TASKS_DDL } from "./task/model.js";
 import { THREADS_META_DDL } from "./thread_meta/model.js";
-import { USERS_DDL } from "./user/model.js";
 
 /**
  * Every Quill-owned table's DDL, in dependency order (parents before the
@@ -31,7 +30,6 @@ import { USERS_DDL } from "./user/model.js";
  * ``channel_connections`` via ``ON DELETE CASCADE``).
  */
 export const ALL_SCHEMA_DDL: readonly string[] = [
-  USERS_DDL,
   THREADS_META_DDL,
   TASKS_DDL,
   RUNS_DDL,

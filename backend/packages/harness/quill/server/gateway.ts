@@ -21,7 +21,7 @@
  *   - Follow-up suggestions, and minimal stubs for models, mcp and channels so
  *     the frontend renders and chats.
  *
- * Persistence, auth and the memory/skills/agents stores are injected by the
+ * Persistence and the memory/skills/agents stores are injected by the
  * launcher (see backend/scripts/*_store.mjs); this module stays free of
  * provider details. Not implemented: run cancellation is best-effort only.
  */
@@ -43,10 +43,6 @@ import {
   ToolMessage,
 } from "@langchain/core/messages";
 
-import {
-  setCurrentUser,
-  resetCurrentUser,
-} from "../runtime/user_context.js";
 import {
   ensureUploadsDir,
   normalizeFilename,
@@ -270,25 +266,6 @@ export const COMMUNITY_TOOL_PROVIDERS: CommunityToolProvider[] = [
   },
 ];
 
-export interface AuthResult {
-  user?: unknown;
-  token?: string;
-  error?: string;
-}
-export interface AuthProvider {
-  setupStatus(): { needs_setup: boolean };
-  initialize(email: string, password: string, name?: string): AuthResult;
-  register(email: string, password: string, name?: string): AuthResult;
-  login(email: string, password: string): AuthResult;
-  me(token: string | undefined): unknown | null;
-  changePassword(
-    token: string | undefined,
-    oldPassword: string,
-    newPassword: string,
-  ): { success?: boolean; error?: string };
-  logout(token: string | undefined): { success: boolean };
-}
-
 export interface ThreadPersistence {
   loadAll(): Record<string, unknown>[];
   saveThread(threadId: string, data: Record<string, unknown>): void;
@@ -386,8 +363,6 @@ export interface GatewayDeps {
     rename: (id: string, name: string, opts?: { user_id?: string | null }) => Promise<boolean>;
     delete: (id: string, opts?: { user_id?: string | null }) => Promise<void>;
   } | null;
-  /** When set, real auth is enforced on /v1/auth/*; otherwise no-auth mode. */
-  auth?: AuthProvider;
   /** Durable global-memory store backing the Memory panel routes. */
   memory?: MemoryStore;
   /** Durable skills store backing the Skills panel routes. */
@@ -851,35 +826,8 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     res.end(JSON.stringify(body));
   }
 
-  const SESSION_COOKIE = "quill_session";
-  function getSessionToken(req: http.IncomingMessage): string | undefined {
-    const cookie = req.headers.cookie;
-    if (cookie) {
-      for (const part of cookie.split(";")) {
-        const [k, ...v] = part.trim().split("=");
-        if (k === SESSION_COOKIE) return decodeURIComponent(v.join("="));
-      }
-    }
-    const auth = req.headers.authorization;
-    if (auth?.startsWith("Bearer ")) return auth.slice(7);
-    return undefined;
-  }
-  function setSessionCookie(token: string): Record<string, string> {
-    return {
-      "Set-Cookie": `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
-    };
-  }
-  function clearSessionCookie(): Record<string, string> {
-    return { "Set-Cookie": `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0` };
-  }
-
-  /** Resolve the current user id from session/auth, or DEFAULT_USER in no-auth mode. */
-  function resolveUserId(req: http.IncomingMessage): string {
-    const sessionToken = getSessionToken(req);
-    if (deps.auth) {
-      const u = deps.auth.me(sessionToken);
-      if (u) return (u as { id: string }).id;
-    }
+  /** Resolve the current user id — always DEFAULT_USER (no auth mode). */
+  function resolveUserId(_req: http.IncomingMessage): string {
     return DEFAULT_USER.id;
   }
 
@@ -900,11 +848,6 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     if (method === "GET" && (pathname === "/health" || p === "/health")) {
       sendJson(req, res, 200, { status: "ok" });
       return;
-    }
-
-    // --- Auth ---
-    if (p.startsWith("/v1/auth/")) {
-      if (await handleAuth(req, res, p, method)) return;
     }
 
     // --- Models ---
@@ -1904,76 +1847,6 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     return false; // not a desktop-sync route
   }
 
-  // --- Auth routes (real when deps.auth set; else no-auth default user) ---
-  async function handleAuth(
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    p: string,
-    method: string,
-  ): Promise<boolean> {
-    const token = getSessionToken(req);
-    const auth = deps.auth;
-
-    if (!auth) {
-      // No-auth mode: satisfy the frontend with a default user.
-      if (p === "/v1/auth/me" && method === "GET") return sendJson(req, res, 200, DEFAULT_USER), true;
-      if (p === "/v1/auth/setup-status" && method === "GET")
-        return sendJson(req, res, 200, { needs_setup: false }), true;
-      if (p === "/v1/auth/providers" && method === "GET")
-        return sendJson(req, res, 200, { providers: [] }), true;
-      if (p === "/v1/auth/logout" && method === "POST")
-        return sendJson(req, res, 200, { success: true }), true;
-      // No password to change in no-auth mode — acknowledge as a no-op so the
-      // frontend change-password form does not surface a confusing 404.
-      if (p === "/v1/auth/change-password" && method === "POST")
-        return sendJson(req, res, 200, { success: true }), true;
-      return false;
-    }
-
-    if (p === "/v1/auth/setup-status" && method === "GET")
-      return sendJson(req, res, 200, auth.setupStatus()), true;
-    if (p === "/v1/auth/providers" && method === "GET")
-      return sendJson(req, res, 200, { providers: [] }), true;
-    if (p === "/v1/auth/me" && method === "GET") {
-      const u = auth.me(token);
-      if (!u) return sendJson(req, res, 401, { detail: "unauthenticated" }), true;
-      return sendJson(req, res, 200, u), true;
-    }
-    if (p === "/v1/auth/logout" && method === "POST") {
-      auth.logout(token);
-      return sendJson(req, res, 200, { success: true }, clearSessionCookie()), true;
-    }
-    if ((p === "/v1/auth/login/local" || p === "/v1/auth/login") && method === "POST") {
-      const b = await readJson(req);
-      const r = auth.login(String(b.email ?? ""), String(b.password ?? ""));
-      if (r.error || !r.token) return sendJson(req, res, 401, { detail: r.error ?? "login_failed" }), true;
-      return sendJson(req, res, 200, r.user, setSessionCookie(r.token)), true;
-    }
-    if (p === "/v1/auth/register" && method === "POST") {
-      const b = await readJson(req);
-      const r = auth.register(String(b.email ?? ""), String(b.password ?? ""), b.name as string | undefined);
-      if (r.error || !r.token) return sendJson(req, res, 400, { detail: r.error ?? "register_failed" }), true;
-      return sendJson(req, res, 201, r.user, setSessionCookie(r.token)), true;
-    }
-    if (p === "/v1/auth/initialize" && method === "POST") {
-      const b = await readJson(req);
-      const r = auth.initialize(String(b.email ?? ""), String(b.password ?? ""), b.name as string | undefined);
-      if (r.error || !r.token) return sendJson(req, res, 400, { detail: r.error ?? "init_failed" }), true;
-      return sendJson(req, res, 201, r.user, setSessionCookie(r.token)), true;
-    }
-    if (p === "/v1/auth/change-password" && method === "POST") {
-      const b = await readJson(req);
-      const r = auth.changePassword(
-        token,
-        String(b.old_password ?? b.current_password ?? ""),
-        String(b.new_password ?? ""),
-      );
-      if (r.error) return sendJson(req, res, 400, { detail: r.error }), true;
-      return sendJson(req, res, 200, { success: true }), true;
-    }
-    return false;
-  }
-
   // --- Memory panel: global memory document + manual facts ---
   async function handleMemory(
     req: http.IncomingMessage,
@@ -2382,18 +2255,6 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
 
     writeEvent("metadata", { run_id: runId, thread_id: threadId });
 
-    // Resolve the authenticated user (or the default user in no-auth mode) and
-    // push it into the runtime user-context so repository code, tools and
-    // middlewares read the same identity. The token is restored in `finally`
-    // to avoid cross-request leakage (mirrors Python's contextvar reset).
-    const sessionToken = getSessionToken(req);
-    let effectiveUser: { id: string } = DEFAULT_USER;
-    if (deps.auth) {
-      const u = deps.auth.me(sessionToken);
-      if (u) effectiveUser = u as { id: string };
-    }
-    const userCtxToken = setCurrentUser(effectiveUser);
-
     try {
       const input = body.input as { messages?: MessageLike[] } | undefined;
       const inputMessages = Array.isArray(input?.messages) ? input!.messages : [];
@@ -2424,7 +2285,7 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
       );
 
       const context = {
-        user_id: effectiveUser.id,
+        user_id: DEFAULT_USER.id,
         ...((body.config as Record<string, unknown>)?.configurable as Record<string, unknown> ?? {}),
         ...((body.context as Record<string, unknown>) ?? {}),
       };
@@ -2571,10 +2432,6 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
       persistThread(t);
       log(deps, `[gateway] run ${runId} failed: ${message}`);
       res.end();
-    } finally {
-      // Restore the previous user context so a subsequent request on the same
-      // process does not inherit this run's identity.
-      resetCurrentUser(userCtxToken);
     }
   }
 
@@ -2672,7 +2529,6 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     const controller = new AbortController();
     activeRuns.set(runId, controller);
 
-    const userCtxToken = setCurrentUser(DEFAULT_USER);
     const promise = (async (): Promise<ScheduledRunStatus> => {
       try {
         // Dedupe the input message against the checkpointer state, the same
@@ -2805,7 +2661,6 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
         return "error";
       } finally {
         scheduledInFlight.delete(task.id);
-        resetCurrentUser(userCtxToken);
       }
     })();
     return { threadId, runId, promise };

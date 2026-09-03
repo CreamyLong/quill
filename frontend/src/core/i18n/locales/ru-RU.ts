@@ -298,8 +298,6 @@ export const ruRU: Translations = {
     reportIssue: "Сообщить о проблеме",
     contactUs: "Связаться с нами",
     about: "О Quill",
-    logout: "Выйти",
-    gatewayUnavailable: "Gateway временно недоступен.",
     gatewayUnavailableRetrying: "Повторная попытка в фоновом режиме…",
   },
 
@@ -654,38 +652,6 @@ export const ruRU: Translations = {
     acknowledge: {
       emptyTitle: "Благодарности",
       emptyDescription: "Здесь будут показаны кредиты и благодарности.",
-    },
-  },
-  login: {
-    signInTitle: "Войдите в свой аккаунт",
-    createAccountTitle: "Создать новый аккаунт",
-    email: "Электронная почта",
-    emailPlaceholder: "you@example.com",
-    password: "Пароль",
-    passwordPlaceholder: "•••••••",
-    pleaseWait: "Пожалуйста, подождите...",
-    signIn: "Войти",
-    createAccount: "Создать аккаунт",
-    createAdminAccount: "Создать аккаунт администратора",
-    adminSetupRequiredTitle: "Требуется настройка администратора",
-    adminSetupRequiredDescription:
-      "Quill нужен аккаунт администратора, прежде чем можно будет создавать новые обычные аккаунты.",
-    orContinueWith: "Или продолжить с",
-    ssoHint:
-      "Если ваш аккаунт использует единую систему аутентификации, войдите с помощью опции ниже.",
-    continueWith: (provider: string) => `Продолжить с ${provider}`,
-    noAccountSignUp: "Нет аккаунта? Зарегистрируйтесь",
-    haveAccountSignIn: "Уже есть аккаунт? Войдите",
-    backToHome: "← Вернуться на главную",
-    networkError: "Ошибка сети. Пожалуйста, попробуйте снова.",
-    authFailed: "Ошибка аутентификации.",
-    errors: {
-      sso_failed: "Ошибка входа SSO. Попробуйте снова или используйте вход по электронной почте.",
-      sso_cancelled: "Вход SSO был отменён.",
-      sso_account_exists:
-        "Аккаунт с такой электронной почтой уже существует. Войдите с помощью пароля или обратитесь к администратору.",
-      sso_not_allowed:
-        "Вход SSO не разрешён для вашего аккаунта. Обратитесь к администратору.",
     },
   },
 };

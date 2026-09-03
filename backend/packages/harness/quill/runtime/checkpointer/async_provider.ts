@@ -95,7 +95,13 @@ export async function makeCheckpointer(appConfig: AppConfig | null = null): Prom
   const config = appConfig ?? getAppConfig();
 
   // Legacy: standalone checkpointer config takes precedence.
-  if (config.checkpointer !== null && config.checkpointer !== undefined) {
+  // An empty object ({}) means "no legacy config" — section() returns {} for
+  // missing keys, so we must also check that the object actually has fields.
+  if (
+    config.checkpointer !== null &&
+    config.checkpointer !== undefined &&
+    Object.keys(config.checkpointer).length > 0
+  ) {
     return buildCheckpointer(parseCheckpointerConfig(config.checkpointer));
   }
 

@@ -29,9 +29,14 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
 
+    let icon = app
+        .default_window_icon()
+        .map(|i| i.clone())
+        .ok_or_else(|| "No default window icon available".to_string())?;
+
     let _tray = TrayIconBuilder::with_id("quill-tray")
         .tooltip("Quill Desktop")
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(icon)
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {

@@ -136,38 +136,6 @@ else
 fi
 
 
-# ── BETTER_AUTH_SECRET ───────────────────────────────────────────────────────
-# Required by Next.js in production. Generated once and persisted so auth
-# sessions survive container restarts.
-
-_secret_file="$QUILL_HOME/.better-auth-secret"
-if [ -z "$BETTER_AUTH_SECRET" ]; then
-    if [ -f "$_secret_file" ]; then
-        export BETTER_AUTH_SECRET
-        BETTER_AUTH_SECRET="$(cat "$_secret_file")"
-        echo -e "${GREEN}✓ BETTER_AUTH_SECRET loaded from $_secret_file${NC}"
-    else
-        export BETTER_AUTH_SECRET
-        if command -v python3 > /dev/null 2>&1 && \
-            BETTER_AUTH_SECRET="$(python3 -c 'import sys; sys.version_info >= (3, 6) or sys.exit(1); import secrets; print(secrets.token_hex(32))' 2>/dev/null)"; then
-            true
-        elif command -v python > /dev/null 2>&1 && \
-            BETTER_AUTH_SECRET="$(python -c 'import sys; sys.version_info >= (3, 6) or sys.exit(1); import secrets; print(secrets.token_hex(32))' 2>/dev/null)"; then
-            true
-        elif command -v openssl > /dev/null 2>&1 && \
-            BETTER_AUTH_SECRET="$(openssl rand -hex 32)"; then
-            true
-        else
-            echo -e "${RED}✗ Cannot generate BETTER_AUTH_SECRET: python3, python, and openssl are all unavailable.${NC}" >&2
-            echo -e "${RED}  Set BETTER_AUTH_SECRET manually before running make up.${NC}" >&2
-            exit 1
-        fi
-        echo "$BETTER_AUTH_SECRET" > "$_secret_file"
-        chmod 600 "$_secret_file"
-        echo -e "${GREEN}✓ BETTER_AUTH_SECRET generated → $_secret_file${NC}"
-    fi
-fi
-
 # ── QUILL_INTERNAL_AUTH_TOKEN ────────────────────────────────────────────
 # Shared by all Gateway workers so channel workers can call internal Gateway
 # APIs even when the request is handled by a different Uvicorn worker.
@@ -282,7 +250,6 @@ if [ "$CMD" = "down" ]; then
     export QUILL_CONFIG_PATH="${QUILL_CONFIG_PATH:-$QUILL_HOME/config.yaml}"
     export QUILL_EXTENSIONS_CONFIG_PATH="${QUILL_EXTENSIONS_CONFIG_PATH:-$QUILL_HOME/extensions_config.json}"
     export QUILL_REPO_ROOT="${QUILL_REPO_ROOT:-$REPO_ROOT}"
-    export BETTER_AUTH_SECRET="${BETTER_AUTH_SECRET:-placeholder}"
     export QUILL_INTERNAL_AUTH_TOKEN="${QUILL_INTERNAL_AUTH_TOKEN:-placeholder}"
     "${COMPOSE_CMD[@]}" down
     exit 0

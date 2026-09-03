@@ -38,8 +38,6 @@ import type { TitleConfig } from "./title_config.js";
 import { loadTitleConfigFromDict } from "./title_config.js";
 import type { SubagentsAppConfig } from "./subagents_config.js";
 import { loadSubagentsConfigFromDict } from "./subagents_config.js";
-import type { AuthAppConfig } from "./auth_config.js";
-import { buildAuthAppConfig } from "./auth_config.js";
 import type { LoopDetectionConfig } from "./loop_detection_config.js";
 import { buildLoopDetectionConfig } from "./loop_detection_config.js";
 import type { ModelConfig } from "./model_config.js";
@@ -76,7 +74,6 @@ export interface AppConfig {
   loopDetection: LoopDetectionConfig;
   circuitBreaker: CircuitBreakerConfig;
   safetyFinishReason: SafetyFinishReasonConfig;
-  auth: AuthAppConfig;
   database: DatabaseConfig;
   runEvents: RunEventsConfig;
   checkpointer: Record<string, unknown> | null;
@@ -363,7 +360,6 @@ function section(cfg: Record<string, unknown>, key: string): Record<string, unkn
     loopDetection: buildLoopDetectionConfig(section(cfg, "loopDetection") as Partial<LoopDetectionConfig>),
     circuitBreaker: buildCircuitBreakerConfig(section(cfg, "circuitBreaker") as Partial<CircuitBreakerConfig>),
     safetyFinishReason: buildSafetyFinishReasonConfig(section(cfg, "safetyFinishReason") as Partial<SafetyFinishReasonConfig>),
-    auth: buildAuthAppConfig(section(cfg, "auth") as Partial<AuthAppConfig>),
     database: buildDatabaseConfig(section(cfg, "database") as Partial<DatabaseConfig>),
     runEvents: buildRunEventsConfig(section(cfg, "runEvents") as Partial<RunEventsConfig>),
     checkpointer: section(cfg, "checkpointer") as Record<string, unknown> | null,
@@ -462,7 +458,6 @@ export function defaultAppConfig(): AppConfig {
     loopDetection: buildLoopDetectionConfig(),
     circuitBreaker: buildCircuitBreakerConfig(),
     safetyFinishReason: buildSafetyFinishReasonConfig(),
-    auth: buildAuthAppConfig(),
     database: buildDatabaseConfig(),
     runEvents: buildRunEventsConfig(),
     checkpointer: null,

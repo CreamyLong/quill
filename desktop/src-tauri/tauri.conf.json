@@ -28,15 +28,6 @@
       }
     }
   },
-  "plugins": {
-    "shell": {
-      "open": true
-    },
-    "dialog": null,
-    "fs": {
-      "requireLiteralLeadingDot": false
-    }
-  },
   "bundle": {
     "active": true,
     "targets": "all",
@@ -56,6 +47,12 @@
     "publisher": "Quill"
   },
   "plugins": {
+    "shell": {
+      "open": true
+    },
+    "fs": {
+      "requireLiteralLeadingDot": false
+    },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlCNjU4RjY3RjJCRjYyM0YKUldTZ2lCUHlXeHdaREdHWEVQMW8zVjJjTWI3bE1jV0Z2MnVQOEp0NnBZbTU2WEZNUVZLV1JRbTAK",
       "endpoints": [

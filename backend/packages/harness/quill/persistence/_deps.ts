@@ -26,7 +26,6 @@ export {
   setCurrentUser,
   resetCurrentUser,
   getCurrentUser,
-  requireCurrentUser,
   getEffectiveUserId,
   resolveRuntimeUserId,
   AutoSentinel,

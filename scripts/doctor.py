@@ -376,59 +376,6 @@ def check_llm_package(config_path: Path) -> list[CheckResult]:
     return results
 
 
-def check_llm_auth(config_path: Path) -> list[CheckResult]:
-    if not config_path.exists():
-        return []
-
-    results: list[CheckResult] = []
-    try:
-        data = _load_yaml_file(config_path)
-        for model in data.get("models", []):
-            use = model.get("use", "")
-            model_name = model.get("name", "default")
-
-            if use == "quill.models.openai_codex_provider:CodexChatModel":
-                auth_path = Path(os.environ.get("CODEX_AUTH_PATH", "~/.codex/auth.json")).expanduser()
-                if auth_path.exists():
-                    results.append(CheckResult(f"Codex CLI auth available (model: {model_name})", "ok", str(auth_path)))
-                else:
-                    results.append(
-                        CheckResult(
-                            f"Codex CLI auth available (model: {model_name})",
-                            "fail",
-                            str(auth_path),
-                            fix="Run `codex login`, or set CODEX_AUTH_PATH to a valid auth.json",
-                        )
-                    )
-
-            if use == "quill.models.claude_provider:ClaudeChatModel":
-                credential_paths = [Path(os.environ["CLAUDE_CODE_CREDENTIALS_PATH"]).expanduser() for env_name in ("CLAUDE_CODE_CREDENTIALS_PATH",) if os.environ.get(env_name)]
-                credential_paths.append(Path("~/.claude/.credentials.json").expanduser())
-                has_oauth_env = any(
-                    os.environ.get(name)
-                    for name in (
-                        "ANTHROPIC_API_KEY",
-                        "CLAUDE_CODE_OAUTH_TOKEN",
-                        "ANTHROPIC_AUTH_TOKEN",
-                        "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
-                    )
-                )
-                existing_path = next((path for path in credential_paths if path.exists()), None)
-                if has_oauth_env or existing_path is not None:
-                    detail = "env var set" if has_oauth_env else str(existing_path)
-                    results.append(CheckResult(f"Claude auth available (model: {model_name})", "ok", detail))
-                else:
-                    results.append(
-                        CheckResult(
-                            f"Claude auth available (model: {model_name})",
-                            "fail",
-                            fix=("Set ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN, or place credentials at ~/.claude/.credentials.json"),
-                        )
-                    )
-    except Exception as exc:
-        results.append(CheckResult("LLM auth check", "fail", str(exc)))
-    return results
-
 
 def check_web_search(config_path: Path) -> CheckResult:
     return check_web_tool(config_path, tool_name="web_search", label="web search configured")
@@ -726,7 +673,6 @@ def main() -> int:
     # ── LLM Provider ──────────────────────────────────────────────────────────
     llm_checks: list[CheckResult] = [
         *check_llm_api_key(config_path),
-        *check_llm_auth(config_path),
         *check_llm_package(config_path),
     ]
     sections.append(("LLM Provider", llm_checks))

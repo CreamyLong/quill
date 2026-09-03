@@ -28,12 +28,6 @@ const meta: MetaRecord = {
   posts: {
     type: "page",
   },
-  login: {
-    type: "page",
-  },
-  setup: {
-    type: "page",
-  },
 };
 
 export default meta;

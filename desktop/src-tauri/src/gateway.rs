@@ -3,8 +3,12 @@
 // The desktop app manages the Gateway lifecycle: starts it on launch,
 // monitors its health, and shuts it down on exit. This eliminates the
 // need for users to run `make dev` manually.
+//
+// The Gateway is launched via its launcher script (backend/scripts/gateway_server.mjs),
+// NOT the compiled server/gateway.js directly — the launcher wires up the agent
+// graph, model catalogue, checkpointer, and store before handing off to the server.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Mutex;
 
@@ -15,7 +19,6 @@ use tauri::Manager;
 pub struct GatewayProcess {
     pub child: Option<std::process::Child>,
     pub port: u16,
-    pub auth_disabled: bool,
 }
 
 impl GatewayProcess {
@@ -35,24 +38,37 @@ impl Drop for GatewayProcess {
     }
 }
 
-/// Find the Gateway binary (node) and the backend entrypoint.
+/// Find the Gateway launcher script (gateway_server.mjs) and the node binary.
+///
+/// The launcher script is the real entrypoint — it assembles the agent graph,
+/// model catalogue, checkpointer and store, then starts the HTTP server.
+/// `dist/gateway.js` alone is NOT runnable.
 fn find_gateway_paths(app: &tauri::AppHandle) -> Result<(PathBuf, PathBuf), String> {
-    // In production, resources are bundled alongside the app.
-    // In dev, we look for the backend directory relative to the project root.
-    let resource_path = app.path().resource_dir().map_err(|e| e.to_string())?;
+    // The launcher script lives at the repo root: backend/scripts/gateway_server.mjs.
+    // In production it is bundled as a Tauri resource; in dev we resolve it
+    // relative to the manifest dir (CARGO_MANIFEST_DIR = .../desktop/src-tauri).
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
+    let dev_repo_root = PathBuf::from(&manifest_dir).join("../..");
+
     let candidates = [
-        resource_path.join("backend/dist/gateway.js"),
-        resource_path.join("backend/packages/harness/dist/gateway.js"),
+        // Production: bundled resource path.
+        app.path()
+            .resource_dir()
+            .ok()
+            .map(|r| r.join("backend/scripts/gateway_server.mjs")),
+        // Dev: repo root / backend/scripts/gateway_server.mjs.
+        Some(dev_repo_root.join("backend/scripts/gateway_server.mjs")),
     ];
-    for p in &candidates {
-        if p.exists() {
-            return Ok((PathBuf::from("node"), p.clone()));
+
+    for c in candidates.iter().flatten() {
+        if c.exists() {
+            return Ok((PathBuf::from("node"), c.clone()));
         }
     }
-    // Fallback: assume `node` is on PATH and backend is at a known location.
-    Ok((
-        PathBuf::from("node"),
-        resource_path.join("backend/dist/gateway.js"),
+
+    Err(format!(
+        "Gateway launcher not found. Searched: {}. Build the backend (cd backend && npm run build) and ensure backend/scripts/gateway_server.mjs exists.",
+        dev_repo_root.join("backend/scripts/gateway_server.mjs").display()
     ))
 }
 
@@ -61,10 +77,8 @@ fn find_gateway_paths(app: &tauri::AppHandle) -> Result<(PathBuf, PathBuf), Stri
 pub async fn start_gateway(
     app: tauri::AppHandle,
     port: Option<u16>,
-    auth_disabled: Option<bool>,
 ) -> Result<u16, String> {
     let port = port.unwrap_or(8200);
-    let auth_disabled = auth_disabled.unwrap_or(true);
 
     // Check if already running.
     let state = app.state::<Mutex<GatewayProcess>>();
@@ -78,38 +92,54 @@ pub async fn start_gateway(
     let (node_bin, entrypoint) = find_gateway_paths(&app)?;
     if !entrypoint.exists() {
         return Err(format!(
-            "Gateway entrypoint not found at: {}. Please build the backend first: cd backend && npm run build",
+            "Gateway launcher not found at: {}. Build the backend first: cd backend && npm run build",
             entrypoint.display()
         ));
     }
 
+    // Resolve an absolute config path so the Gateway reads the repo-root config.yaml
+    // regardless of the child process's working directory.
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
+    let config_path = PathBuf::from(&manifest_dir)
+        .join("../../config.yaml")
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from("config.yaml"));
+
     let mut cmd = std::process::Command::new(&node_bin);
     cmd.arg(&entrypoint)
-        .env("SCITOPS_PORT", port.to_string())
+        .env("QUILL_PORT", port.to_string())
         .env("QUILL_ENV", "desktop")
-        .env("QUILL_CONFIG_PATH", "config.yaml")
+        .env("QUILL_CONFIG_PATH", config_path.to_string_lossy().as_ref())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    if auth_disabled {
-        cmd.env("QUILL_AUTH_DISABLED", "1");
-    }
+    let mut child = cmd.spawn().map_err(|e| format!("Failed to start gateway: {}", e))?;
 
-    let child = cmd.spawn().map_err(|e| format!("Failed to start gateway: {}", e))?;
+    // CRITICAL: drain stdout/stderr on background threads. If we pipe but never
+    // read, the OS pipe buffer (~64KB) fills up and the child blocks forever
+    // on its next write, hanging the Gateway.
+    let stdout = child.stdout.take().expect("stdout was piped");
+    let stderr = child.stderr.take().expect("stderr was piped");
+    std::thread::spawn(move || {
+        use std::io::{BufRead, BufReader};
+        let reader = BufReader::new(stdout);
+        for line in reader.lines().flatten() {
+            println!("[gateway] {line}");
+        }
+    });
+    std::thread::spawn(move || {
+        use std::io::{BufRead, BufReader};
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().flatten() {
+            eprintln!("[gateway-err] {line}");
+        }
+    });
 
     {
         let mut gp = state.lock().map_err(|e| e.to_string())?;
         gp.child = Some(child);
         gp.port = port;
-        gp.auth_disabled = auth_disabled;
     }
-
-    // Spawn a background task to log gateway output.
-    let app_clone = app.clone();
-    tauri::async_runtime::spawn(async move {
-        let _ = app_clone;
-        // In a real implementation, we'd pipe stdout/stderr to a log file.
-    });
 
     Ok(port)
 }
@@ -131,6 +161,5 @@ pub async fn gateway_status(app: tauri::AppHandle) -> Result<serde_json::Value, 
     Ok(serde_json::json!({
         "running": gp.child.is_some(),
         "port": gp.port,
-        "auth_disabled": gp.auth_disabled,
     }))
 }

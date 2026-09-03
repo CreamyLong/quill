@@ -29,7 +29,6 @@ pub fn run() {
         .manage(Mutex::new(gateway::GatewayProcess {
             child: None,
             port: 8200,
-            auth_disabled: true,
         }))
         .invoke_handler(tauri::generate_handler![
             // Filesystem bridge
