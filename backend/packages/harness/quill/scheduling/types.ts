@@ -55,4 +55,28 @@ export interface ScheduledTaskInput {
   schedule?: ScheduleSpec;
   thread_id?: string | null;
   enabled?: boolean;
+  /** Maximum jitter in seconds to spread load (default: 0 = no jitter). */
+  max_jitter_seconds?: number;
+  /** Whether to skip if previous run is still in-flight (default: true). */
+  coalesce?: boolean;
+  /** Days before a stale task is auto-disabled (default: 7, 0 = never). */
+  stale_threshold_days?: number;
+  /** Optional model override for this task's runs. */
+  model?: string | null;
 }
+
+/** Enhanced scheduling features (from Kimi Code + DeerFlow 2.0). */
+export interface SchedulingFeatures {
+  /** Deterministic jitter: spread load with configurable max jitter. */
+  maxJitterSeconds: number;
+  /** Coalescing: skip if previous run still in-flight. */
+  coalesce: boolean;
+  /** Stale cleanup: auto-disable tasks not run in N days (0 = never). */
+  staleThresholdDays: number;
+}
+
+export const DEFAULT_SCHEDULING_FEATURES: SchedulingFeatures = {
+  maxJitterSeconds: 0,
+  coalesce: true,
+  staleThresholdDays: 7,
+};

@@ -266,5 +266,56 @@ export interface ThreadState {
   internal?: Record<string, unknown> | null;
   /** Forced re-engagement signal set by middleware (e.g. TodoMiddleware). */
   jump_to?: string | null;
+  /** Active goal state for persistent multi-turn objective tracking. */
+  goal?: GoalState | null;
   [key: string]: unknown;
+}
+
+/** Goal state for persistent multi-turn objective tracking (Goal Mode). */
+export interface GoalState {
+  /** The objective text. */
+  objective: string;
+  /** Current status of the goal. */
+  status: "active" | "satisfied" | "abandoned" | "paused";
+  /** Creation timestamp. */
+  created_at: string;
+  /** Last update timestamp. */
+  updated_at: string;
+  /** Number of automatic continuations performed. */
+  continuation_count: number;
+  /** Maximum number of automatic continuations allowed. */
+  max_continuations: number;
+  /** Number of consecutive evaluations with no progress. */
+  no_progress_count: number;
+  /** Maximum no-progress continuations before standing down. */
+  max_no_progress_continuations: number;
+  /** The most recent evaluation result. */
+  last_evaluation?: {
+    satisfied: boolean;
+    blocker: "none" | "missing_evidence" | "needs_user_input" | "run_failed" | "external_wait" | "goal_not_met_yet";
+    reason: string;
+    evidence_summary?: string;
+    run_id?: string;
+    evaluated_at?: string;
+    progress_key?: string;
+    stand_down_reason?: string;
+  };
+}
+
+/** Reducer for goal state — preserves terminal states (satisfied/abandoned). */
+export function mergeGoal(
+  existing: GoalState | null | undefined,
+  incoming: GoalState | null | undefined,
+): GoalState | null | undefined {
+  if (incoming === null || incoming === undefined) {
+    return existing;
+  }
+  if (existing === null || existing === undefined) {
+    return incoming;
+  }
+  // Once satisfied or abandoned, don't regress
+  if (existing.status === "satisfied" || existing.status === "abandoned") {
+    return existing;
+  }
+  return incoming;
 }

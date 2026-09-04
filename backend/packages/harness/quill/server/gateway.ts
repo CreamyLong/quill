@@ -1710,6 +1710,224 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
       }
     }
 
+    // --- Session Forking (from Kimi Code + DeepSeek Harness) ---
+    // POST /threads/{threadId}/fork — create a branched copy of a thread
+    const forkRoute = p.match(/^\/threads\/([^/]+)\/fork$/);
+    if (forkRoute && method === "POST") {
+      const sourceThreadId = decodeURIComponent(forkRoute[1]);
+      const sourceThread = threads.get(sourceThreadId);
+      if (!sourceThread) {
+        sendJson(req, res, 404, { detail: "Source thread not found" });
+        return;
+      }
+      const forkBody = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+      const newThreadId = randomUUID();
+      const forkedThread: ThreadRecord = {
+        ...sourceThread,
+        thread_id: newThreadId,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        state_updated_at: nowIso(),
+        metadata: {
+          ...sourceThread.metadata,
+          forked_from: sourceThreadId,
+          fork_checkpoint_id: (forkBody.checkpoint_id as string) ?? null,
+        },
+        values: { ...sourceThread.values },
+      };
+      threads.set(newThreadId, forkedThread);
+      persistThread(forkedThread);
+      sendJson(req, res, 201, threadView(forkedThread));
+      return;
+    }
+
+    // --- Goal Engine API ---
+    // POST /threads/{threadId}/goal — set a goal for a thread
+    const goalSetRoute = p.match(/^\/threads\/([^/]+)\/goal$/);
+    if (goalSetRoute && method === "POST") {
+      const threadId = decodeURIComponent(goalSetRoute[1]);
+      const t = threads.get(threadId);
+      if (!t) {
+        sendJson(req, res, 404, { detail: "Thread not found" });
+        return;
+      }
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const objective = body.objective as string;
+      if (!objective) {
+        sendJson(req, res, 400, { detail: "objective is required" });
+        return;
+      }
+      const now = nowIso();
+      const goalState = {
+        objective,
+        status: "active",
+        created_at: now,
+        updated_at: now,
+        continuation_count: 0,
+        max_continuations: (body.max_continuations as number) ?? 8,
+        no_progress_count: 0,
+        max_no_progress_continuations: (body.max_no_progress_continuations as number) ?? 3,
+      };
+      if (!t.values) t.values = {};
+      (t.values as Record<string, unknown>).goal = goalState;
+      t.updated_at = now;
+      t.state_updated_at = now;
+      persistThread(t);
+      sendJson(req, res, 200, { ok: true, goal: goalState });
+      return;
+    }
+
+    // DELETE /threads/{threadId}/goal — abandon the active goal
+    if (goalSetRoute && method === "DELETE") {
+      const threadId = decodeURIComponent(goalSetRoute[1]);
+      const t = threads.get(threadId);
+      if (!t) {
+        sendJson(req, res, 404, { detail: "Thread not found" });
+        return;
+      }
+      const values = (t.values as Record<string, unknown>) ?? {};
+      const currentGoal = values.goal as Record<string, unknown> | undefined;
+      if (currentGoal) {
+        currentGoal.status = "abandoned";
+        currentGoal.updated_at = nowIso();
+        t.values = { ...values, goal: currentGoal };
+        t.updated_at = nowIso();
+        t.state_updated_at = t.updated_at;
+        persistThread(t);
+      }
+      sendJson(req, res, 200, { ok: true });
+      return;
+    }
+
+    // --- Session Search (from Hermes Agent) ---
+    // POST /threads/search/fulltext — full-text search across all threads
+    if (p === "/threads/search/fulltext" && method === "POST") {
+      const searchBody = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+      const query = (searchBody.query as string) ?? "";
+      const searchLimit = (searchBody.limit as number) ?? 20;
+      if (!query.trim()) {
+        sendJson(req, res, 200, { results: [], query: "" });
+        return;
+      }
+      // Simple in-memory full-text search across thread titles and messages
+      const results: Array<{ thread_id: string; title: string; snippet: string; score: number }> = [];
+      const queryLower = query.toLowerCase();
+      const queryTerms = queryLower.split(/\s+/).filter(Boolean);
+      for (const thread of threads.values()) {
+        const title = (thread.title ?? "").toLowerCase();
+        const threadValues = (thread.values as Record<string, unknown>) ?? {};
+        const messages = (threadValues.messages as Array<{ content: string }>) ?? [];
+        let score = 0;
+        let snippet = "";
+        // Score title matches higher
+        for (const term of queryTerms) {
+          if (title.includes(term)) score += 10;
+        }
+        // Score message content matches
+        for (const msg of messages) {
+          const content = (msg.content ?? "").toLowerCase();
+          for (const term of queryTerms) {
+            if (content.includes(term)) {
+              score += 1;
+              if (!snippet) {
+                // Extract a snippet around the match
+                const idx = content.indexOf(term);
+                const start = Math.max(0, idx - 40);
+                const end = Math.min(content.length, idx + term.length + 40);
+                snippet = (start > 0 ? "..." : "") + content.slice(start, end) + (end < content.length ? "..." : "");
+              }
+            }
+          }
+        }
+        if (score > 0) {
+          results.push({
+            thread_id: thread.thread_id,
+            title: thread.title ?? "Untitled",
+            snippet,
+            score,
+          });
+        }
+      }
+      results.sort((a, b) => b.score - a.score);
+      sendJson(req, res, 200, { results: results.slice(0, searchLimit), query });
+      return;
+    }
+
+    // --- Agent Teams API (from DeepSeek Harness + CrewAI) ---
+    // In-memory team store (per-gateway instance)
+    const teams = new Map<string, Record<string, unknown>>();
+
+    // POST /teams — create a new agent team
+    if (p === "/teams" && method === "POST") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const teamId = randomUUID();
+      const now = nowIso();
+      const teammates = ((body.teammates as Array<Record<string, unknown>>) ?? []).map((t) => ({
+        id: randomUUID(),
+        name: t.name as string,
+        role: t.role as string,
+        systemPrompt: (t.systemPrompt as string) ?? `You are ${t.name}, a ${t.role}.`,
+        status: "idle",
+        subagentType: (t.subagentType as string) ?? "general-purpose",
+      }));
+      const tasks = ((body.tasks as Array<Record<string, unknown>>) ?? []).map((t) => ({
+        id: randomUUID(),
+        description: t.description as string,
+        prompt: t.prompt as string,
+        assignee: teammates.find((tm) => tm.name === t.assignee)?.id ?? "unassigned",
+        blockedBy: (t.blockedBy as string[]) ?? [],
+        status: ((t.blockedBy as string[]) ?? []).length > 0 ? "blocked" : "ready",
+        created_at: now,
+        updated_at: now,
+      }));
+      const team = {
+        id: teamId,
+        strategy: (body.strategy as string) ?? "supervisor",
+        teammates,
+        tasks,
+        mailbox: [],
+        phase: "forming",
+        created_at: now,
+        updated_at: now,
+      };
+      teams.set(teamId, team);
+      sendJson(req, res, 201, team);
+      return;
+    }
+
+    // GET /teams/{teamId} — get team state
+    const teamRoute = p.match(/^\/teams\/([^/]+)$/);
+    if (teamRoute && method === "GET") {
+      const teamId = decodeURIComponent(teamRoute[1]);
+      const team = teams.get(teamId);
+      if (!team) {
+        sendJson(req, res, 404, { detail: "Team not found" });
+        return;
+      }
+      sendJson(req, res, 200, team);
+      return;
+    }
+
+    // POST /teams/{teamId}/tasks/{taskId}/complete — mark task complete
+    const teamTaskComplete = p.match(/^\/teams\/([^/]+)\/tasks\/([^/]+)\/complete$/);
+    if (teamTaskComplete && method === "POST") {
+      const teamId = decodeURIComponent(teamTaskComplete[1]);
+      const taskId = decodeURIComponent(teamTaskComplete[2]);
+      const team = teams.get(teamId);
+      if (!team) {
+        sendJson(req, res, 404, { detail: "Team not found" });
+        return;
+      }
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const tasks = (team.tasks as Array<Record<string, unknown>>).map((t) =>
+        t.id === taskId ? { ...t, status: "completed", result: (body.result as string) ?? "", updated_at: nowIso() } : t,
+      );
+      const updated = { ...team, tasks, updated_at: nowIso() };
+      teams.set(teamId, updated);
+      sendJson(req, res, 200, updated);
+      return;
+    }
+
     sendJson(req, res, 404, { detail: "Not found" });
   }
 

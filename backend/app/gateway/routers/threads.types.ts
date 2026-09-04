@@ -104,6 +104,76 @@ export interface ThreadHistoryResponse {
   next_cursor?: string | null;
 }
 
+/** Goal state for persistent multi-turn objective tracking. */
+export interface GoalState {
+  objective: string;
+  status: "active" | "satisfied" | "abandoned" | "paused";
+  created_at: string;
+  updated_at: string;
+  continuation_count: number;
+  max_continuations: number;
+  no_progress_count: number;
+  max_no_progress_continuations: number;
+  last_evaluation?: {
+    satisfied: boolean;
+    blocker: string;
+    reason: string;
+    evidence_summary?: string;
+    run_id?: string;
+    evaluated_at?: string;
+    progress_key?: string;
+    stand_down_reason?: string;
+  };
+}
+
+/** Request to fork a thread. */
+export interface ThreadForkRequest {
+  /** Optional checkpoint ID to fork from (omit for latest). */
+  checkpoint_id?: string | null;
+}
+
+/** Response from fork operation. */
+export interface ThreadForkResponse {
+  thread_id: string;
+  source_thread_id: string;
+  status: string;
+  created_at: string;
+}
+
+/** Request to set a goal. */
+export interface GoalSetRequest {
+  objective: string;
+  max_continuations?: number;
+  max_no_progress_continuations?: number;
+}
+
+/** Response from goal operations. */
+export interface GoalResponse {
+  ok: boolean;
+  goal?: GoalState;
+  message?: string;
+}
+
+/** Full-text search request. */
+export interface FullTextSearchRequest {
+  query: string;
+  limit?: number;
+}
+
+/** Search result entry. */
+export interface SearchResultEntry {
+  thread_id: string;
+  title: string;
+  snippet: string;
+  score: number;
+}
+
+/** Full-text search response. */
+export interface FullTextSearchResponse {
+  results: SearchResultEntry[];
+  query: string;
+}
+
 /** Metadata keys that the server controls; clients are not allowed to set them. */
 export const SERVER_RESERVED_METADATA_KEYS: readonly string[] = ["owner_id", "user_id"];
 

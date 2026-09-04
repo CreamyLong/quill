@@ -81,6 +81,7 @@ import { presentFilesMiddleware } from "../middlewares/present_files_middleware.
 import { createGuardrailMiddleware } from "../../guardrails/loader.js";
 import { toolResultSanitizationMiddleware } from "../../middlewares/tool_result_sanitization.js";
 import { createLifecycleHookMiddleware, type LifecycleHookMiddlewareOptions } from "../../middlewares/lifecycle_middleware.js";
+import { goalMiddleware } from "../middlewares/goal_middleware.js";
 
 const _BOOTSTRAP_SKILL_NAMES = new Set<string>(["bootstrap"]);
 
@@ -404,6 +405,13 @@ export function buildMiddlewares(
   middlewares.push(
     memoryMiddleware({ agentName, memoryConfig: resolvedAppConfig.memory, getUserId }),
   );
+
+  // [16b] Goal — evaluate active goals and auto-continue toward objectives.
+  //      Registered after Memory so goal evaluation can use the full context.
+  const goalConfig = resolvedAppConfig.goal;
+  if (goalConfig?.enabled) {
+    middlewares.push(goalMiddleware({ enabled: true }));
+  }
 
   // [17] ViewImage — inject image details before the LLM (vision models only).
   //      Use the resolved runtime modelName to avoid stale config values.

@@ -44,6 +44,8 @@ import type { ModelConfig } from "./model_config.js";
 import type { ToolConfig, ToolGroupConfig } from "./tool_config.js";
 import type { SafetyFinishReasonConfig } from "./safety_finish_reason_config.js";
 import { buildSafetyFinishReasonConfig } from "./safety_finish_reason_config.js";
+import type { GoalConfig } from "./goal_config.js";
+import { buildGoalConfig } from "./goal_config.js";
 
 export type { ModelConfig, ToolConfig, ToolGroupConfig };
 
@@ -74,6 +76,7 @@ export interface AppConfig {
   loopDetection: LoopDetectionConfig;
   circuitBreaker: CircuitBreakerConfig;
   safetyFinishReason: SafetyFinishReasonConfig;
+  goal: GoalConfig;
   database: DatabaseConfig;
   runEvents: RunEventsConfig;
   checkpointer: Record<string, unknown> | null;
@@ -360,6 +363,7 @@ function section(cfg: Record<string, unknown>, key: string): Record<string, unkn
     loopDetection: buildLoopDetectionConfig(section(cfg, "loopDetection") as Partial<LoopDetectionConfig>),
     circuitBreaker: buildCircuitBreakerConfig(section(cfg, "circuitBreaker") as Partial<CircuitBreakerConfig>),
     safetyFinishReason: buildSafetyFinishReasonConfig(section(cfg, "safetyFinishReason") as Partial<SafetyFinishReasonConfig>),
+    goal: buildGoalConfig(section(cfg, "goal") as Record<string, unknown> | null),
     database: buildDatabaseConfig(section(cfg, "database") as Partial<DatabaseConfig>),
     runEvents: buildRunEventsConfig(section(cfg, "runEvents") as Partial<RunEventsConfig>),
     checkpointer: section(cfg, "checkpointer") as Record<string, unknown> | null,
@@ -458,6 +462,7 @@ export function defaultAppConfig(): AppConfig {
     loopDetection: buildLoopDetectionConfig(),
     circuitBreaker: buildCircuitBreakerConfig(),
     safetyFinishReason: buildSafetyFinishReasonConfig(),
+    goal: buildGoalConfig(),
     database: buildDatabaseConfig(),
     runEvents: buildRunEventsConfig(),
     checkpointer: null,

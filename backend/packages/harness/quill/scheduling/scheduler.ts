@@ -10,7 +10,8 @@
  *   previous run has not yet completed.
  */
 
-import type { ScheduledTask, ScheduledRunStatus } from "./types.js";
+import type { ScheduledTask, ScheduledRunStatus, SchedulingFeatures } from "./types.js";
+import { DEFAULT_SCHEDULING_FEATURES } from "./types.js";
 import { nextCronRun } from "./cron.js";
 
 /** Minimal contract the scheduler needs from a task store. */
@@ -43,6 +44,8 @@ export interface SchedulerOptions {
   now?: () => Date;
   /** Optional log sink. */
   logger?: (message: string) => void;
+  /** Enhanced scheduling features (jitter, coalescing, stale cleanup). */
+  features?: Partial<SchedulingFeatures>;
 }
 
 /**
@@ -70,6 +73,7 @@ export class ScheduledTaskScheduler {
   private readonly tickMs: number;
   private readonly now: () => Date;
   private readonly logger: (message: string) => void;
+  private readonly features: SchedulingFeatures;
   private timer: NodeJS.Timeout | null = null;
   /** Task ids that have a run currently in flight. */
   private inFlight: Set<string> = new Set();
@@ -80,6 +84,7 @@ export class ScheduledTaskScheduler {
     this.tickMs = options.tickMs ?? 30_000;
     this.now = options.now ?? (() => new Date());
     this.logger = options.logger ?? (() => {});
+    this.features = { ...DEFAULT_SCHEDULING_FEATURES, ...options.features };
   }
 
   /** Start the periodic tick. The timer is unref'd so it never keeps the
@@ -108,14 +113,37 @@ export class ScheduledTaskScheduler {
    * Single tick: find all due tasks, fire them sequentially, and persist the
    * resulting bookkeeping. Sequential firing keeps resource usage bounded;
    * high-throughput use can swap to a bounded-concurrency queue.
+   *
+   * Enhanced features (from Kimi Code + DeerFlow 2.0):
+   * - Coalescing: skip if previous run is still in-flight
+   * - Jitter: add randomized delay to spread load
+   * - Stale cleanup: auto-disable tasks not fired in N days
    */
   async tick(now: Date = this.now()): Promise<void> {
     const tasks = this.store.list();
+
+    // Stale cleanup: auto-disable tasks not fired in N days
+    if (this.features.staleThresholdDays > 0) {
+      const staleCutoff = now.getTime() - this.features.staleThresholdDays * 86400000;
+      for (const task of tasks) {
+        if (!task.enabled) continue;
+        if (task.last_run_at && new Date(task.last_run_at).getTime() < staleCutoff) {
+          this.logger(`[scheduler] auto-disabling stale task '${task.name}' (${task.id})`);
+          this.store.save({ ...task, enabled: false, updated_at: now.toISOString() });
+        }
+      }
+    }
+
     for (const task of tasks) {
       if (!task.enabled) continue;
       if (task.next_run_at === null) continue;
       if (now.getTime() < new Date(task.next_run_at).getTime()) continue;
-      if (this.inFlight.has(task.id)) continue;
+
+      // Coalescing: skip if previous run is still in-flight
+      if (this.features.coalesce && this.inFlight.has(task.id)) {
+        this.logger(`[scheduler] skipping in-flight task '${task.name}' (${task.id})`);
+        continue;
+      }
 
       this.inFlight.add(task.id);
       this.logger(`[scheduler] firing task '${task.name}' (${task.id})`);
@@ -143,8 +171,33 @@ export class ScheduledTaskScheduler {
         run_count: fresh.run_count + (result.status === "skipped" ? 0 : 1),
       };
       updated.next_run_at = computeNextRun(updated, finishedAt);
+
+      // Apply jitter to next run time (deterministic based on task id)
+      if (this.features.maxJitterSeconds > 0 && updated.next_run_at) {
+        const jitterMs = this._deterministicJitter(task.id, this.features.maxJitterSeconds) * 1000;
+        updated.next_run_at = new Date(
+          new Date(updated.next_run_at).getTime() + jitterMs,
+        ).toISOString();
+      }
+
       this.store.save(updated);
     }
+  }
+
+  /**
+   * Deterministic jitter: produces a stable pseudo-random value in [0, maxSeconds)
+   * based on the task id and current hour. This ensures the same task gets the
+   * same jitter within an hour, but different tasks get different jitter.
+   */
+  private _deterministicJitter(taskId: string, maxSeconds: number): number {
+    // Simple hash of taskId + current hour
+    const hourBucket = Math.floor(Date.now() / 3600000);
+    let hash = 0;
+    const input = `${taskId}:${hourBucket}`;
+    for (let i = 0; i < input.length; i++) {
+      hash = ((hash << 5) - hash + input.charCodeAt(i)) | 0;
+    }
+    return (Math.abs(hash) % 10000) / 10000 * maxSeconds;
   }
 
   /** Whether a task currently has a run in progress. */

@@ -956,6 +956,28 @@ safety_finish_reason:
   #       error_codes: [336003, 17, 18]
 
 # ============================================================================
+# Goal Engine Configuration
+# ============================================================================
+# Goal Mode: persistent multi-turn objective tracking with automatic
+# continuation. When enabled, the agent evaluates progress after each turn
+# and auto-continues toward the goal until satisfied or the continuation
+# limit is reached.
+#
+# Source patterns: Kimi Code Goal Mode, DeerFlow 2.0 /goal command
+goal:
+  enabled: false
+  # Maximum automatic continuations per goal (default: 8).
+  # The agent will auto-continue up to this many times before standing down.
+  # max_continuations: 8
+  #
+  # Maximum consecutive no-progress evaluations before standing down (default: 3).
+  # If the agent makes no progress for this many evaluations, it pauses the goal.
+  # max_no_progress_continuations: 3
+  #
+  # Use a cheaper model for goal evaluation LLM calls (default: false).
+  # use_cheaper_model: false
+
+# ============================================================================
 # Sandbox Configuration
 # ============================================================================
 # Choose between local sandbox (direct execution) or Docker-based AIO sandbox
