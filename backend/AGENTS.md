@@ -45,7 +45,7 @@ quill/
 │   │           ├── tools/discovery/   # Budgeted tool catalog (OpenWork CodeMode pattern)
 │   │           ├── tools/receipts/    # Tool receipt verification (DeerFlow pattern)
 │   │           ├── tools/builtins/    # Built-in tools (present_files, ask_clarification, view_image, review_skill_package)
-│   │           ├── mcp/               # MCP integration (tools, cache, client)
+│   │           ├── mcp/               # MCP integration (client, server, cache, conversational config)
 │   │           ├── mcp_tasks/         # Durable MCP task runtime (lease-based execution)
 │   │           ├── models/            # Model factory with thinking/vision support
 │   │           ├── skills/            # Skills discovery, loading, parsing
@@ -1103,6 +1103,71 @@ deterministically — no LLM needed.
 - SHA-256 hashes of args and results for integrity verification
 - Ledger injection into model context with character budget
 - Citation verification: `[r2]` bare or `[r2 write_file]` anchored
+
+### MCP Dual-Role Architecture (`packages/harness/quill/mcp/server.ts`)
+
+Port of OpenClaw's MCP dual-role pattern. Quill is both an MCP client (consuming
+external MCP servers) AND an MCP server (exposing its conversations and tools to
+external MCP clients like Claude Code, Codex, etc.).
+
+**Bridge tools** (exposed to external MCP clients):
+- `conversations_list` — List recent thread conversations
+- `conversation_get` — Fetch a thread's message history
+- `messages_send` — Send a message to a thread (creates a run)
+- `messages_read` — Read messages from a specific run
+- `events_poll` — Poll for run events (non-blocking)
+- `events_wait` — Wait for new run events (long-poll)
+- `permissions_list` — List open permission requests
+- `permissions_respond` — Respond to a permission request
+
+**Transports**: stdio (for editor integrations) and HTTP+SSE (for remote clients).
+
+### Conversational MCP Configuration (`packages/harness/quill/mcp/conversational_config.ts`)
+
+Port of Kimi Code CLI's AI-native MCP configuration. Instead of hand-editing JSON,
+users add/configure MCP servers through a structured conversational interface.
+
+**Actions**: `add_server`, `configure_server`, `authenticate`, `remove_server`,
+`test_connection`, `list_servers`. Each action produces a `ConversationalStep`
+that the frontend renders as a form or confirmation dialog.
+
+### Depth-Aware Tool Policy (`packages/harness/quill/agents/middlewares/depth_aware_tool_policy_middleware.ts`)
+
+Port of OpenClaw's depth-aware subagent tool policy. As subagents nest deeper,
+they automatically lose access to dangerous tools, containing the blast radius
+of recursive delegation.
+
+**Depth levels**: 0 (lead agent, full access) → 1 (control-plane tools removed)
+→ 2+ (delegation tools removed) → 3 (max depth, no delegation permitted).
+
+### Manual Context Compaction (`packages/harness/quill/agents/middlewares/compact_middleware.ts`)
+
+Port of DeerFlow's `/compact` command. Provides explicit user control over when
+conversation summarization happens. Users type `/compact` (optionally with a
+keep-count like `/compact 20`) to summarize older turns while preserving recent
+messages verbatim.
+
+### Trace Correlation IDs (`packages/harness/quill/agents/middlewares/trace_correlation_middleware.ts`)
+
+Port of DeerFlow's trace correlation ID system. Generates a unique `X-Trace-Id`
+per top-level run that propagates through sub-agents, background threads, and
+SSE event streams. Format: `q-<8-char-hex>`. Visible in HTTP response headers
+and injected into LangChain callback metadata for LangSmith/Langfuse tracing.
+
+### Adaptive Permissions (`packages/harness/quill/guardrails/adaptive_permissions.ts`)
+
+Port of awesome-harness-engineering's adaptive permissions pattern and OpenClaw's
+tool policy layers. Progressive security model: as users gain experience (more
+sessions, higher success ratio, older accounts), the system reduces approval
+friction. Five levels (0=Strict → 4=Full), with manual override/pinning support.
+
+### Memory Invalidation (`packages/harness/quill/agents/memory/invalidation.ts`)
+
+Port of awesome-harness-engineering's memory invalidation research. "Stale memories
+are more dangerous than no memory." Every stored fact carries metadata (timestamp,
+confidence, source). A background consolidation pass invalidates stale or
+contradictory facts using exponential recency decay and Jaccard-similarity
+contradiction detection.
 
 ## Code Style
 
