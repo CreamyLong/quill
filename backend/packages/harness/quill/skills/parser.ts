@@ -94,6 +94,85 @@ export function parseAllowedTools(raw: unknown, skillFile: string): string[] | n
  *
  * Returns a Skill object if parsing succeeds, null otherwise.
  */
+/**
+ * Parsed SKILL.md frontmatter fields.
+ */
+export interface SkillFrontmatter {
+  name: string;
+  description: string;
+  license: string | null;
+  allowedTools: string[] | null;
+  requiredSecrets: string[] | null;
+}
+
+/**
+ * Parse YAML frontmatter from raw SKILL.md content.
+ *
+ * Extracts the `---` delimited YAML block and returns the key fields.
+ * Returns null when no valid frontmatter is found.
+ */
+export function parseSkillFrontmatter(content: string): SkillFrontmatter | null {
+  const frontMatterMatch = /^---\s*\n([\s\S]*?)\n---\s*\n/.exec(content);
+  if (!frontMatterMatch) {
+    return null;
+  }
+
+  const frontMatterText = frontMatterMatch[1];
+
+  let metadata: unknown;
+  try {
+    metadata = YAML.parse(frontMatterText);
+  } catch (exc) {
+    console.error(formatYamlError("<inline>", exc, frontMatterText));
+    return null;
+  }
+
+  if (metadata === null || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const meta = metadata as Record<string, unknown>;
+  const rawName = meta.name;
+  const rawDescription = meta.description;
+
+  if (!rawName || typeof rawName !== "string") {
+    return null;
+  }
+  if (!rawDescription || typeof rawDescription !== "string") {
+    return null;
+  }
+
+  const name = rawName.trim();
+  const description = rawDescription.trim();
+  if (!name || !description) {
+    return null;
+  }
+
+  let licenseText: string | null = null;
+  const rawLicense = meta.license;
+  if (rawLicense !== null && rawLicense !== undefined) {
+    licenseText = String(rawLicense).trim() || null;
+  }
+
+  let allowedTools: string[] | null;
+  try {
+    allowedTools = parseAllowedTools(meta["allowed-tools"], "<inline>");
+  } catch (exc) {
+    console.error(`Invalid allowed-tools: ${String(exc)}`);
+    allowedTools = null;
+  }
+
+  let requiredSecrets: string[] | null = null;
+  const rawSecrets = meta["required-secrets"];
+  if (Array.isArray(rawSecrets)) {
+    requiredSecrets = rawSecrets.map((s) => String(s));
+  } else if (typeof rawSecrets === "string" && rawSecrets.trim().length > 0) {
+    requiredSecrets = rawSecrets.split(",").map((s) => String(s).trim()).filter(Boolean);
+  }
+
+  return { name, description, license: licenseText, allowedTools, requiredSecrets };
+}
+
 export function parseSkillFile(skillFile: string, category: SkillCategory, relativePath?: string | null): Skill | null {
   if (!fs.existsSync(skillFile) || path.basename(skillFile) !== SKILL_MD_FILE) {
     return null;

@@ -53,7 +53,7 @@ export interface ToolProgressConfig {
 // ---------------------------------------------------------------------------
 
 /** Per-tool execution tracking state. */
-export interface ToolProgressState {
+export interface ToolProgressTrackingState {
   /** Current state of this tool. */
   state: ToolProgressState;
   /** Total number of calls. */
@@ -97,12 +97,12 @@ export interface ProblemRecord {
  *   const allowed = tracker.isAllowed(toolName);
  */
 export class ToolProgressTracker {
-  private states: Map<string, ToolProgressState> = new Map();
+  private states: Map<string, ToolProgressTrackingState> = new Map();
 
   constructor(private config: ToolProgressConfig = {}) {}
 
   /** Get or create state for a tool. */
-  private getOrCreateState(toolName: string): ToolProgressState {
+  private getOrCreateState(toolName: string): ToolProgressTrackingState {
     const key = toolName;
     if (!this.states.has(key)) {
       this.states.set(key, {
@@ -182,13 +182,13 @@ export class ToolProgressTracker {
   }
 
   /** Get the current state for a tool. */
-  getState(toolName: string): ToolProgressState | null {
+  getState(toolName: string): ToolProgressTrackingState | null {
     const state = this.states.get(toolName);
     return state ?? null;
   }
 
   /** Get all tracked states. */
-  getAllStates(): Map<string, ToolProgressState> {
+  getAllStates(): Map<string, ToolProgressTrackingState> {
     return new Map(this.states);
   }
 
@@ -234,14 +234,14 @@ import type { LifecycleHook } from "./lifecycle_hooks.js";
 export function createToolProgressHook(
   tracker: ToolProgressTracker,
   opts?: {
-    preTool?: (toolName: string, state: ToolProgressState) => void;
+    preTool?: (toolName: string, state: ToolProgressTrackingState) => void;
     postTool?: (toolName: string, hasError: boolean, error?: string) => void;
   },
 ): { preTool: LifecycleHook; postTool: LifecycleHook } {
   const preTool: LifecycleHook = async (request) => {
     if ("name" in request) {
       const toolName = request.name as string;
-      opts?.preTool?.(toolName, tracker.getState(toolName) ?? null);
+      opts?.preTool?.(toolName, tracker.getState(toolName) ?? { state: ToolProgressState.ACTIVE, totalCalls: 0, consecutiveProblems: 0, consecutiveWarnings: 0, problemHistory: [] });
       tracker.recordPreCall(toolName);
     }
   };
@@ -263,4 +263,3 @@ export function createToolProgressHook(
   return { preTool, postTool };
 }
 
-export { ToolProgressState };

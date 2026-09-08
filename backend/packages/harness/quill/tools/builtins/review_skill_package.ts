@@ -14,8 +14,9 @@
  * decides whether to proceed with installation based on the verdict.
  */
 
+import { tool } from "@langchain/core/tools";
+import type { StructuredToolInterface } from "@langchain/core/tools";
 import { z } from "zod";
-import { StructuredTool } from "@langchain/core/tools";
 
 import { parseSkillFrontmatter, type SkillFrontmatter } from "../../skills/parser.js";
 import { scanSkillContent, type ScanResult } from "../../skills/security_scanner.js";
@@ -67,21 +68,22 @@ type ReviewSkillPackageInput = z.infer<typeof ReviewSkillPackageInputSchema>;
  */
 export function createReviewSkillPackageTool(options: {
   modelFactory?: (opts: { name?: string | null; thinkingEnabled?: boolean }) => unknown;
-}): StructuredTool {
-  const tool = new StructuredTool({
-    name: "review_skill_package",
-    description:
-      "Review a skill package (SKILL.md) before installation. " +
-      "Checks frontmatter validity, security, tool-policy consistency, and " +
-      "required-secrets declarations. Returns a structured verdict " +
-      "(proceed/warn/block) with findings. Does NOT install the skill.",
-    schema: ReviewSkillPackageInputSchema,
-    func: async (input: ReviewSkillPackageInput): Promise<string> => {
+}): StructuredToolInterface {
+  return tool(
+    async (input: ReviewSkillPackageInput): Promise<string> => {
       const review = await reviewSkillPackage(input, options);
       return JSON.stringify(review, null, 2);
     },
-  });
-  return tool;
+    {
+      name: "review_skill_package",
+      description:
+        "Review a skill package (SKILL.md) before installation. " +
+        "Checks frontmatter validity, security, tool-policy consistency, and " +
+        "required-secrets declarations. Returns a structured verdict " +
+        "(proceed/warn/block) with findings. Does NOT install the skill.",
+      schema: ReviewSkillPackageInputSchema,
+    },
+  );
 }
 
 /**
@@ -102,45 +104,54 @@ export async function reviewSkillPackage(
 
   // 1. Parse frontmatter.
   try {
-    frontmatter = parseSkillFrontmatter(input.skillMdContent);
-    findings.push({
-      severity: "info",
-      code: "frontmatter_parsed",
-      message: `Parsed frontmatter: name="${frontmatter.name}", description="${frontmatter.description.slice(0, 80)}"`,
-    });
-
-    // Validate required fields.
-    if (!frontmatter.name || frontmatter.name.trim().length === 0) {
+    const parsed = parseSkillFrontmatter(input.skillMdContent);
+    if (!parsed) {
       findings.push({
         severity: "error",
-        code: "missing_name",
-        message: "SKILL.md frontmatter is missing a 'name' field.",
+        code: "frontmatter_parse_error",
+        message: "Failed to parse SKILL.md frontmatter.",
       });
-    }
-    if (!frontmatter.description || frontmatter.description.trim().length === 0) {
-      findings.push({
-        severity: "warn",
-        code: "missing_description",
-        message: "SKILL.md frontmatter is missing a 'description' field.",
-      });
-    }
-
-    // Validate allowed-tools references (when present).
-    if (frontmatter.allowedTools && frontmatter.allowedTools.length > 0) {
+    } else {
+      frontmatter = parsed;
       findings.push({
         severity: "info",
-        code: "allowed_tools_declared",
-        message: `Declared allowed-tools: ${frontmatter.allowedTools.join(", ")}`,
+        code: "frontmatter_parsed",
+        message: `Parsed frontmatter: name="${frontmatter.name}", description="${frontmatter.description.slice(0, 80)}"`,
       });
-    }
 
-    // Validate required-secrets declarations (when present).
-    if (frontmatter.requiredSecrets && frontmatter.requiredSecrets.length > 0) {
-      findings.push({
-        severity: "info",
-        code: "required_secrets_declared",
-        message: `Declared required-secrets: ${frontmatter.requiredSecrets.join(", ")}`,
-      });
+      // Validate required fields.
+      if (!frontmatter.name || frontmatter.name.trim().length === 0) {
+        findings.push({
+          severity: "error",
+          code: "missing_name",
+          message: "SKILL.md frontmatter is missing a 'name' field.",
+        });
+      }
+      if (!frontmatter.description || frontmatter.description.trim().length === 0) {
+        findings.push({
+          severity: "warn",
+          code: "missing_description",
+          message: "SKILL.md frontmatter is missing a 'description' field.",
+        });
+      }
+
+      // Validate allowed-tools references (when present).
+      if (frontmatter.allowedTools && frontmatter.allowedTools.length > 0) {
+        findings.push({
+          severity: "info",
+          code: "allowed_tools_declared",
+          message: `Declared allowed-tools: ${frontmatter.allowedTools.join(", ")}`,
+        });
+      }
+
+      // Validate required-secrets declarations (when present).
+      if (frontmatter.requiredSecrets && frontmatter.requiredSecrets.length > 0) {
+        findings.push({
+          severity: "info",
+          code: "required_secrets_declared",
+          message: `Declared required-secrets: ${frontmatter.requiredSecrets.join(", ")}`,
+        });
+      }
     }
   } catch (err) {
     findings.push({

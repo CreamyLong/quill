@@ -1814,7 +1814,8 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
       const queryLower = query.toLowerCase();
       const queryTerms = queryLower.split(/\s+/).filter(Boolean);
       for (const thread of threads.values()) {
-        const title = (thread.title ?? "").toLowerCase();
+        const threadMeta = (thread.metadata ?? {}) as Record<string, unknown>;
+        const title = ((threadMeta.title as string) ?? "").toLowerCase();
         const threadValues = (thread.values as Record<string, unknown>) ?? {};
         const messages = (threadValues.messages as Array<{ content: string }>) ?? [];
         let score = 0;
@@ -1842,7 +1843,7 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
         if (score > 0) {
           results.push({
             thread_id: thread.thread_id,
-            title: thread.title ?? "Untitled",
+            title: (threadMeta.title as string) ?? "Untitled",
             snippet,
             score,
           });
@@ -2016,7 +2017,7 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
           return true;
         }
         const boundary = boundaryMatch[1].trim().replace(/"/g, "");
-        const parts = raw.split(Buffer.from(`--${boundary}`));
+        const parts = raw.toString("utf-8").split(`--${boundary}`);
         let savedPath: string | null = null;
         for (const part of parts) {
           const headerEnd = part.indexOf("\r\n\r\n");

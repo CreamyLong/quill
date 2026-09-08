@@ -139,7 +139,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
             description: "Maximum number of conversations to return (default: 20).",
           },
         },
-      } as Record<string, unknown>,
+      } as any,
     },
     async (args: Record<string, unknown>) => {
       const limit = typeof args.limit === "number" ? Math.min(args.limit, 100) : 20;
@@ -164,7 +164,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
           },
         },
         required: ["thread_id"],
-      } as Record<string, unknown>,
+      } as any,
     },
     async (args: Record<string, unknown>) => {
       const threadId = String(args.thread_id);
@@ -193,7 +193,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
           },
         },
         required: ["thread_id", "message"],
-      } as Record<string, unknown>,
+      } as any,
     },
     async (args: Record<string, unknown>) => {
       const threadId = String(args.thread_id);
@@ -223,7 +223,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
           },
         },
         required: ["run_id"],
-      } as Record<string, unknown>,
+      } as any,
     },
     async (args: Record<string, unknown>) => {
       const runId = String(args.run_id);
@@ -253,7 +253,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
           },
         },
         required: ["run_id"],
-      } as Record<string, unknown>,
+      } as any,
     },
     async (args: Record<string, unknown>) => {
       const runId = String(args.run_id);
@@ -287,7 +287,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
           },
         },
         required: ["run_id"],
-      } as Record<string, unknown>,
+      } as any,
     },
     async (args: Record<string, unknown>) => {
       const runId = String(args.run_id);
@@ -310,7 +310,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
       inputSchema: {
         type: "object",
         properties: {},
-      } as Record<string, unknown>,
+      } as any,
     },
     async () => {
       const requests = await deps.listPermissions();
@@ -342,7 +342,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
           },
         },
         required: ["id", "approved"],
-      } as Record<string, unknown>,
+      } as any,
     },
     async (args: Record<string, unknown>) => {
       const id = String(args.id);
@@ -362,7 +362,7 @@ export function createMcpServer(deps: McpServerDeps, serverName: string = "quill
         name,
         {
           description: tool.description,
-          inputSchema: tool.inputSchema,
+          inputSchema: tool.inputSchema as any,
         },
         tool.handler
       );

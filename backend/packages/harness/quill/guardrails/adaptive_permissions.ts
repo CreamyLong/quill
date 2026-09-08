@@ -97,7 +97,8 @@ export function computePermissionLevel(profile: UserTrustProfile): PermissionLev
 
   // Find the highest level the user qualifies for.
   let computedLevel: PermissionLevel = 0;
-  for (let level: PermissionLevel = 1; level <= 4; level++) {
+  const levels: PermissionLevel[] = [1, 2, 3, 4];
+  for (const level of levels) {
     const threshold = LEVEL_THRESHOLDS[level];
     if (
       profile.session_count >= threshold.minSessions &&

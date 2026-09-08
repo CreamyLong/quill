@@ -46,7 +46,8 @@ export function getTraceId(state: ThreadState): string | undefined {
 
   // Check config metadata.
   const config = (state as Record<string, unknown>)._config as Record<string, unknown> | undefined;
-  const fromConfig = config?.metadata?.trace_id as string | undefined;
+  const metadata = (config?.metadata ?? {}) as Record<string, unknown>;
+  const fromConfig = metadata.trace_id as string | undefined;
   return fromConfig;
 }
 

@@ -30,45 +30,7 @@ import type { StructuredToolInterface } from "@langchain/core/tools";
 
 import type { ModelRequest, ToolCallRequest, MiddlewareDefinition } from "../agents/factory.js";
 import type { ThreadState } from "../agents/thread_state.js";
-
-// ---------------------------------------------------------------------------
-// Hook types
-// ---------------------------------------------------------------------------
-
-/** A lifecycle hook function.  Receives the full request context. */
-export type LifecycleHook = (
-  request: ModelRequest | ToolCallRequest,
-  state: ThreadState,
-  config: RunnableConfig
-) => Promise<void> | void;
-
-/** One registered lifecycle hook at a specific phase. */
-export interface LifecycleHookRegistration {
-  /** Human-readable hook name (for logging). */
-  name: string;
-  /** Phase to run in. */
-  phase: "pre_model" | "post_model" | "pre_tool" | "post_tool";
-  /** The hook function. */
-  fn: LifecycleHook;
-  /** If true, the hook runs even when no tools are called (model-only phases). */
-  required?: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Hook configuration
-// ---------------------------------------------------------------------------
-
-/** Per-run hook configuration.  Passed via config metadata. */
-export interface LifecycleHookConfig {
-  /** Pre-model hooks: run before the LLM is called. */
-  pre_model?: LifecycleHook[];
-  /** Post-model hooks: run after the LLM response, before tool execution. */
-  post_model?: LifecycleHook[];
-  /** Pre-tool hooks: gate individual tool executions. */
-  pre_tool?: LifecycleHook[];
-  /** Post-tool hooks: audit after tool results. */
-  post_tool?: LifecycleHook[];
-}
+import type { LifecycleHook, LifecycleHookRegistration, LifecycleHookConfig } from "./lifecycle_hooks.js";
 
 // ---------------------------------------------------------------------------
 // Lifecycle middleware options
@@ -152,7 +114,7 @@ export function createLifecycleHookMiddleware(
     if (lastMsg && lastMsg.getType() === "tool") {
       const toolCall: ToolCallRequest = {
         name: (lastMsg as unknown as { tool_call_id?: string }).tool_call_id ?? "unknown",
-        args: (lastMsg as unknown as { content?: unknown }).content ?? "",
+        args: {},
         tool_call_id: (lastMsg as unknown as { tool_call_id?: string }).tool_call_id ?? "",
         state,
       };

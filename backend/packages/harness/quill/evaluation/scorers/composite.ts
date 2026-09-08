@@ -44,7 +44,7 @@ export function resolveScorer(config: EvalScoringConfig): EvalScorer | null {
   return BUILTIN_SCORERS[config.type] ?? null;
 }
 
-async function compositeScore(
+export async function compositeScore(
   config: Extract<EvalScoringConfig, { type: "composite" }>,
   task: EvalTask,
   result: EvalTaskResult,

@@ -41,6 +41,9 @@ export interface ToolAnnotations {
   openWorldHint: boolean;
 }
 
+/** Metadata key for attaching annotations to tool invocations. */
+export const ANNOTATIONS_METADATA_KEY = "quill.tool_annotations";
+
 /** All-false default — a tool that declares nothing is assumed to have no special safety properties. */
 export const EMPTY_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: false,

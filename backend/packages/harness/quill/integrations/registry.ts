@@ -53,7 +53,7 @@ export function discoverIntegrations(searchPaths: string[]): RegisteredIntegrati
         const raw = fs.readFileSync(manifestPath, "utf-8");
         const manifest = parseIntegrationYaml(raw);
         const integration: RegisteredIntegration = {
-          manifest: manifest as IntegrationManifest,
+          manifest: manifest as unknown as IntegrationManifest,
           directory: intDir,
           installed: false,
         };

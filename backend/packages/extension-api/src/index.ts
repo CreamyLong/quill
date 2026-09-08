@@ -21,6 +21,12 @@ export type {
   ExtensionModule,
 } from "./types.js";
 
+// Local type imports for use within this module.
+import type {
+  ExtensionHookPhase,
+  ExtensionManifest,
+} from "./types.js";
+
 // Version of this extension API contract.
 export const EXTENSION_API_VERSION = "1.0.0";
 

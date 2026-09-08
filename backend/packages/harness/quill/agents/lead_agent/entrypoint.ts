@@ -33,7 +33,7 @@ import type { CompiledStateGraph } from "@langchain/langgraph";
  */
 export async function makeLeadAgent(
   config: RunnableConfig
-): Promise<CompiledStateGraph> {
+): Promise<unknown> {
   // Heavyweight imports deferred to function body.
   const { makeLeadAgent: _makeLeadAgent } = await import("./agent.js");
   return _makeLeadAgent(config);

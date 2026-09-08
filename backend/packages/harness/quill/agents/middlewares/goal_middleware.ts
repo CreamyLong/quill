@@ -90,6 +90,10 @@ export function goalMiddleware(options: GoalMiddlewareOptions = {}): MiddlewareD
       const messages = state.messages ?? [];
       const evaluation = evaluateGoalSync(manager, goal, messages);
 
+      if (!evaluation) {
+        return {};
+      }
+
       // Decide next action
       const { goal: updatedGoal, shouldContinue, standDownReason } =
         manager.decideNext(goal, evaluation);

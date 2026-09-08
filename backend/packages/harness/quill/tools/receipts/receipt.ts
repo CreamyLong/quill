@@ -218,7 +218,7 @@ export function verifyCitations(
         valid: false,
         reason: `Receipt r${displayNumber} does not exist`,
       });
-    else if (anchor && anchor !== receipt.toolName) {
+    } else if (anchor && anchor !== receipt.toolName) {
       citations.push({
         id: displayNumber,
         anchor,

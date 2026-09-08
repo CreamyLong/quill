@@ -115,7 +115,7 @@ router.delete("/:name", (req, res) => {
   try {
     const removed = removeConfigModelAndReload(name);
     if (!removed) {
-      res.status(404).json({ error: `Model '${name}' not found" });
+      res.status(404).json({ error: `Model '${name}' not found` });
       return;
     }
     res.json({ success: true });

@@ -39,7 +39,7 @@ import type { ThreadState } from "../agents/thread_state.js";
 export type LifecycleHook = (
   request: ModelRequest | ToolCallRequest,
   state: ThreadState,
-  config: RunnableConfig
+  config?: RunnableConfig
 ) => Promise<void> | void;
 
 /** One registered lifecycle hook at a specific phase. */
@@ -237,7 +237,7 @@ export function createBudgetGuardHook(
     fn: (request, state) => {
       const internal = (state.internal ?? {}) as Record<string, unknown>;
       const totalTokens = (internal._totalTokensUsed as number) ?? 0;
-      if (totalTokens >= opts.maxTotalTokens) {
+      if (opts.maxTotalTokens && totalTokens >= opts.maxTotalTokens) {
         throw new Error(
           `Budget exceeded: ${totalTokens} >= ${opts.maxTotalTokens} tokens consumed`,
         );
@@ -298,4 +298,3 @@ export function loadLifecycleHooks(
   return [preModel, postModel, preTool, postTool];
 }
 
-export { LifecycleHook, LifecycleHookRegistration, LifecycleHookConfig };

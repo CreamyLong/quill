@@ -276,7 +276,7 @@ interface CategoryAccumulator {
 
 function finalizeAccumulators(
   accs: Record<string, CategoryAccumulator>,
-): import("./types.js").CategoryStats {
+): Record<string, import("./types.js").CategoryStats> {
   const result: Record<string, import("./types.js").CategoryStats> = {};
   for (const [key, acc] of Object.entries(accs)) {
     result[key] = {
@@ -286,5 +286,5 @@ function finalizeAccumulators(
       meanScore: acc.total > 0 ? acc.scoreSum / acc.total : 0,
     };
   }
-  return result as import("./types.js").CategoryStats;
+  return result;
 }

@@ -20,7 +20,9 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/express": "^5.0.6",
     "@types/jszip": "^3.4.0",
+    "@types/multer": "^2.2.0",
     "@types/node": "^22.20.0",
     "typescript": "^5.9.3"
   },

@@ -131,7 +131,7 @@ export function sanitizeToolResult(
 // Middleware definition
 // ---------------------------------------------------------------------------
 
-import type { MiddlewareDefinition, ModelCallRequest, ToolCallRequest } from "../agents/factory.js";
+import type { ModelRequest } from "../agents/factory.js";
 
 /**
  * Wrap tool call results through sanitization.
@@ -156,9 +156,10 @@ export function toolResultSanitizationMiddleware(
 
       if (result instanceof Array) {
         // State update with messages array — sanitize each message
+        const stateResult = result as unknown as Partial<ThreadState> & { messages: BaseMessage[] };
         return {
-          ...result,
-          messages: result.messages.map((msg) =>
+          ...stateResult,
+          messages: stateResult.messages.map((msg) =>
             msg.getType() === "tool" ? sanitizeToolMessage(msg, request.name, opts) : msg,
           ),
         } as unknown as BaseMessage | Partial<ThreadState>;
@@ -200,8 +201,8 @@ function sanitizeToolMessage(
   });
 
   // Clone the message with sanitized content
-  const sanitizedMsg = message.clone ? message.clone() : { ...message };
-  (sanitizedMsg as unknown as { content: string }).content = sanitized;
+  const sanitizedMsg = { ...message } as BaseMessage & { content: string };
+  sanitizedMsg.content = sanitized;
 
   return sanitizedMsg;
 }
@@ -233,4 +234,3 @@ export function applyDefaultRedaction(content: string): string {
 // Exported API
 // ---------------------------------------------------------------------------
 
-export { ToolResultSanitizationOptions };

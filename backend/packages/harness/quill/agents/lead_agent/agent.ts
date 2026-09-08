@@ -80,7 +80,7 @@ import { clarificationMiddleware } from "../middlewares/clarification_middleware
 import { presentFilesMiddleware } from "../middlewares/present_files_middleware.js";
 import { createGuardrailMiddleware } from "../../guardrails/loader.js";
 import { toolResultSanitizationMiddleware } from "../../middlewares/tool_result_sanitization.js";
-import { createLifecycleHookMiddleware, type LifecycleHookMiddlewareOptions } from "../../middlewares/lifecycle_middleware.js";
+import { createLifecycleHookMiddleware, type LifecycleMiddlewareOptions } from "../../middlewares/lifecycle_middleware.js";
 import { goalMiddleware } from "../middlewares/goal_middleware.js";
 
 const _BOOTSTRAP_SKILL_NAMES = new Set<string>(["bootstrap"]);

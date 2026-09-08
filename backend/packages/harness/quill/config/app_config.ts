@@ -462,7 +462,7 @@ export function defaultAppConfig(): AppConfig {
     loopDetection: buildLoopDetectionConfig(),
     circuitBreaker: buildCircuitBreakerConfig(),
     safetyFinishReason: buildSafetyFinishReasonConfig(),
-    goal: buildGoalConfig(),
+    goal: buildGoalConfig(undefined),
     database: buildDatabaseConfig(),
     runEvents: buildRunEventsConfig(),
     checkpointer: null,
