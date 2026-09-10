@@ -42,6 +42,7 @@ import {
   SystemMessage,
   ToolMessage,
 } from "@langchain/core/messages";
+import type { BaseCheckpointSaver } from "@langchain/langgraph";
 
 import {
   ensureUploadsDir,
@@ -400,6 +401,16 @@ export interface GatewayDeps {
   scheduledTaskStore?: ScheduledTaskStore | null;
   /** Tick interval (ms) for the built-in scheduled-task scheduler. Default: 30_000. */
   scheduledTaskTickMs?: number;
+  /**
+   * Checkpointer for session forking. When set, the fork endpoint copies
+   * checkpoints so the new thread has the full conversation history.
+   */
+  checkpointer?: BaseCheckpointSaver | null;
+  /**
+   * SQLite database for FTS5 session search. When set, the search endpoint
+   * uses BM25-ranked full-text search instead of in-memory scan.
+   */
+  searchDb?: import("node:sqlite").DatabaseSync | null;
   logger?: (message: string) => void;
 }
 
@@ -881,6 +892,42 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     // --- Skills / Agents / Memory (Settings panels) ---
     if (p === "/skills/install" && method === "POST") {
       await handleSkillsInstall(req, res);
+      return;
+    }
+    // --- Marketplace Install (from GitHub/URL) ---
+    if (p === "/skills/marketplace/install" && method === "POST") {
+      const mpBody = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+      const source = (mpBody.source as "github" | "url") ?? "github";
+      const target = (mpBody.target as string) ?? "";
+      const skillName = mpBody.skill_name as string | undefined;
+      const targetDir = deps.uploadsRoot
+        ? path.join(deps.uploadsRoot, "..", "skills", "custom")
+        : path.join(process.cwd(), "skills", "custom");
+
+      if (!target) {
+        sendJson(req, res, 400, { detail: "target is required (GitHub repo or URL)" });
+        return;
+      }
+
+      try {
+        const { installFromMarketplace } = await import("../skills/marketplace_install.js");
+        const result = await installFromMarketplace({
+          source,
+          target,
+          skillName,
+          targetDir,
+        });
+        if (result.success) {
+          sendJson(req, res, 201, result);
+        } else {
+          sendJson(req, res, 400, result);
+        }
+      } catch (err) {
+        sendJson(req, res, 500, {
+          success: false,
+          error: `Marketplace install failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
       return;
     }
     if (p === "/skills" || p.startsWith("/skills/")) {
@@ -1722,6 +1769,25 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
       }
       const forkBody = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
       const newThreadId = randomUUID();
+
+      // Deep fork: copy checkpoints if a checkpointer is available
+      let checkpointsCopied = 0;
+      if (deps.checkpointer) {
+        try {
+          const { forkSession } = await import("../runtime/fork.js");
+          const result = await forkSession({
+            checkpointer: deps.checkpointer,
+            sourceThreadId,
+            newThreadId,
+            checkpointId: (forkBody.checkpoint_id as string) || undefined,
+          });
+          checkpointsCopied = result.checkpointsCopied;
+        } catch (err) {
+          // Fall back to shallow copy if checkpoint copy fails
+          console.warn(`[gateway] checkpoint copy failed for fork, falling back to shallow: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
       const forkedThread: ThreadRecord = {
         ...sourceThread,
         thread_id: newThreadId,
@@ -1732,12 +1798,13 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
           ...sourceThread.metadata,
           forked_from: sourceThreadId,
           fork_checkpoint_id: (forkBody.checkpoint_id as string) ?? null,
+          fork_checkpoints_copied: checkpointsCopied,
         },
         values: { ...sourceThread.values },
       };
       threads.set(newThreadId, forkedThread);
       persistThread(forkedThread);
-      sendJson(req, res, 201, threadView(forkedThread));
+      sendJson(req, res, 201, { ...threadView(forkedThread), checkpoints_copied: checkpointsCopied });
       return;
     }
 
@@ -1809,7 +1876,26 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
         sendJson(req, res, 200, { results: [], query: "" });
         return;
       }
-      // Simple in-memory full-text search across thread titles and messages
+
+      // Use FTS5 search when a database is available
+      if (deps.searchDb) {
+        try {
+          const { SessionSearchIndex } = await import("../runtime/session_search.js");
+          const index = new SessionSearchIndex(deps.searchDb!);
+          const ftsResults = index.search({ query, limit: searchLimit });
+          sendJson(req, res, 200, {
+            results: ftsResults,
+            query,
+            engine: "fts5",
+            indexed_threads: index.getIndexedCount(),
+          });
+          return;
+        } catch (err) {
+          console.warn(`[gateway] FTS5 search failed, falling back to in-memory: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
+      // Fallback: Simple in-memory full-text search across thread titles and messages
       const results: Array<{ thread_id: string; title: string; snippet: string; score: number }> = [];
       const queryLower = query.toLowerCase();
       const queryTerms = queryLower.split(/\s+/).filter(Boolean);
@@ -1850,7 +1936,38 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
         }
       }
       results.sort((a, b) => b.score - a.score);
-      sendJson(req, res, 200, { results: results.slice(0, searchLimit), query });
+      sendJson(req, res, 200, { results: results.slice(0, searchLimit), query, engine: "memory" });
+      return;
+    }
+
+    // --- Session Search Index Management ---
+    // POST /threads/search/index — index a thread's messages for FTS5 search
+    if (p === "/threads/search/index" && method === "POST") {
+      if (!deps.searchDb) {
+        sendJson(req, res, 503, { detail: "Search database not available" });
+        return;
+      }
+      const indexBody = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+      const threadId = (indexBody.thread_id as string) ?? "";
+      if (!threadId) {
+        sendJson(req, res, 400, { detail: "thread_id is required" });
+        return;
+      }
+      const title = (indexBody.title as string) ?? "Untitled";
+      const messages = (indexBody.messages as Array<{ content: string; role: string; timestamp?: string }>) ?? [];
+      try {
+        const { SessionSearchIndex } = await import("../runtime/session_search.js");
+        const index = new SessionSearchIndex(deps.searchDb!);
+        index.indexThread(threadId, title, messages);
+        sendJson(req, res, 200, {
+          ok: true,
+          thread_id: threadId,
+          messages_indexed: messages.length,
+          total_indexed_threads: index.getIndexedCount(),
+        });
+      } catch (err) {
+        sendJson(req, res, 500, { detail: `Indexing failed: ${err instanceof Error ? err.message : String(err)}` });
+      }
       return;
     }
 
