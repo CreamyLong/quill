@@ -236,6 +236,15 @@ flowchart TB
 | **Multi-Language** | UI supports 8 languages: English, 中文, 한국어, 日本語, Français, Русский, Español, العربية |
 | **IM Channels** | Telegram, Slack, Discord, Feishu, DingTalk integration |
 | **Scheduled Tasks** | Cron/interval-driven scheduled runs with multi-instance support |
+| **Self-Improving Skills** | Agent autonomously creates and improves skills after complex tasks (inspired by Hermes Agent) |
+| **Adaptive Permissions** | Progressive trust levels from Strict → Full based on session history (inspired by OpenClaw) |
+| **Observability Dashboard** | System-wide token usage, cost analytics, and activity metrics |
+| **Multi-Agent Coordination** | Supervisor, round-robin, handoff, and hierarchical team patterns (inspired by CrewAI/AutoGen) |
+| **Workflow Engine** | DAG-based agent orchestration with parallel execution and retry (inspired by DeerFlow) |
+| **Tool Receipts** | Deterministic verification layer for agent tool calls (inspired by DeerFlow 2.0) |
+| **Memory Invalidation** | Stale/contradictory fact detection with three-tier memory model |
+| **MCP Dual-Role** | Quill is both MCP client and server (inspired by OpenClaw) |
+| **Depth-Aware Policy** | Subagents lose dangerous tools as nesting depth increases |
 
 ---
 

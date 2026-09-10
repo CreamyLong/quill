@@ -103,6 +103,22 @@ cd frontend && pnpm test      # Unit tests
 Rule of thumb: **root `make` = the full application**; **`backend/Makefile` and `frontend/`
 (`pnpm`) = per-module work.**
 
+## Recent Competitive Updates (2026-09)
+
+Quill was systematically evaluated against 10 leading harness frameworks (OpenWork, DeepSeek Harness, OpenClaw, Hermes Agent, Kimi Code CLI, OpenAI Codex, DeerFlow, AutoGen, CrewAI). The following capabilities were added or enhanced based on that analysis:
+
+- **Self-Improving Skills** (`tools/skill_manage_tool.ts`) — Agent autonomously creates/patches/deletes skills in `skills/custom/` after complex tasks. Gated by `skill_evolution.enabled` in config. Ports Hermes Agent's learning loop.
+- **Adaptive Permissions** (`guardrails/adaptive_permissions.ts`) — Progressive trust levels (0-4) that auto-advance based on session count, success ratio, and account age. Inspired by OpenClaw + awesome-harness-engineering.
+- **Multi-Agent Coordination** (`multi_agent/`) — Supervisor, round-robin, handoff, and hierarchical team patterns. Ports CrewAI/AutoGen/LangGraph patterns.
+- **Workflow Engine** (`workflows/`) — DAG-based agent orchestration with parallel execution, retry, and conditional branching. Ports DeerFlow + CrewAI Flows.
+- **Tool Receipts** (`tools/receipts/`) — Deterministic verification layer for agent tool calls. Ports DeerFlow 2.0's receipt system.
+- **Memory Invalidation** (`agents/memory/invalidation.ts`) — Stale/contradictory fact detection with three-tier memory model. Ports awesome-harness-engineering research.
+- **MCP Dual-Role** (`mcp/server.ts`) — Quill is both MCP client and server (8 bridge tools). Ports OpenClaw's dual-role pattern.
+- **Depth-Aware Policy** (`agents/middlewares/depth_aware_tool_policy_middleware.ts`) — Subagents lose dangerous tools as nesting depth increases.
+- **Tool Discovery** (`tools/discovery/`) — Budgeted catalog with fair token allocation. Ports OpenWork CodeMode.
+- **Observability Dashboard** (`app/gateway/routers/metrics.ts`, `frontend/.../metrics-dashboard.tsx`) — System-wide token usage, cost analytics, and activity metrics.
+- **Tool Management** (`tools/tools.ts`) — Wired `skill_manage` tool into the tool registry when skill evolution is enabled.
+
 ## Where to Go Next
 
 - Backend work → **[backend/AGENTS.md](backend/AGENTS.md)**

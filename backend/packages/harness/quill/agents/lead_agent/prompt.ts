@@ -131,14 +131,29 @@ function buildSkillEvolutionSection(skillEvolutionEnabled: boolean): string {
   }
   return `
 ## Skill Self-Evolution
+You have the \`skill_manage\` tool to create, improve, and delete skills in the \`skills/custom/\` directory.
 After completing a task, consider creating or updating a skill when:
 - The task required 5+ tool calls to resolve
 - You overcame non-obvious errors or pitfalls
 - The user corrected your approach and the corrected version worked
 - You discovered a non-trivial, recurring workflow
-If you used a skill and encountered issues not covered by it, patch it immediately.
-Prefer patch over edit. Before creating a new skill, confirm with the user first.
-Skip simple one-off tasks.
+- A workflow is likely to be reused across sessions
+
+**Operations:**
+- \`create\` — pass full SKILL.md content (YAML frontmatter + body) for a new skill
+- \`patch\` — replace the content of an existing custom skill
+- \`improve\` — same as patch, but explicitly records it as an improvement in history
+- \`delete\` — remove a custom skill you no longer need
+
+**Rules:**
+- Always include \`reason\` explaining why the skill is being created or improved
+- Skill names must be hyphen-case (e.g., \`data-analysis-pipeline\`)
+- SKILL.md must have valid YAML frontmatter with \`name\` and \`description\`
+- Before creating a new skill, confirm with the user first
+- If you used a skill and encountered issues not covered by it, patch it immediately
+- Prefer patch over create (avoid duplicates)
+- Skip simple one-off tasks that won't be reused
+- All writes are security-scanned before being committed to disk
 `;
 }
 

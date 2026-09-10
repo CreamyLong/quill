@@ -31,6 +31,7 @@ import type { AppConfig } from "../config/app_config.js";
 import { getAppConfig } from "../config/app_config.js";
 import { createAskClarificationTool } from "./builtins/clarification_tool.js";
 import { createPresentFilesTool } from "./builtins/present_file_tool.js";
+import { createSkillManageTool } from "./skill_manage_tool.js";
 import {
   getGlobalCatalog,
   type RuntimeToolCatalog,
@@ -97,9 +98,7 @@ export function getAvailableTools(options: GetAvailableToolsOptions = {}): Struc
   // Skill-evolution tool (if enabled in config).
   const skillEvolution = config.skillEvolution;
   if (skillEvolution?.enabled) {
-    // `skill_manage_tool` requires deps not yet ported; skip until then.
-    // When ported, import { skillManageTool } from "./skill_manage_tool.js"
-    // and append here.
+    tools.push(createSkillManageTool({ appConfig: config }));
   }
 
   // Subagent tools (task) — requires TaskToolDeps, injected via extraTools.
