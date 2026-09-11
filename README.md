@@ -1,19 +1,145 @@
-# 🪶 Quill
+# 🪶 Quill — Open-Source AI Super-Agent Framework
 
-> Open-source AI work assistant — research, code, and create, all in one place
+> **The open-source alternative to OpenAI Codex, Cursor, Claude Code, and DeerFlow.**
+> AI agent framework with sandboxed code execution, sub-agent orchestration, MCP, skills marketplace, session forking, FTS5 search, multi-agent teams, and a native Tauri desktop app.
 
 <div align="center">
 
 **English** · [中文](README_zh.md) · [한국어](README_ko.md) · [日本語](README_ja.md) · [Français](README_fr.md) · [Русский](README_ru.md) · [Español](README_es.md) · [العربية](README_ar.md)
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15.x-000000.svg?logo=next.js&logoColor=white)](https://nextjs.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Agent%20Runtime-1C1C1C.svg)](https://langchain-ai.github.io/langgraph/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)](https://opensource.org/licenses/Apache-2.0)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000.svg?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-1.x-1C1C1C.svg)](https://langchain-ai.github.io/langgraph/)
+[![Tauri](https://img.shields.io/badge/Tauri-2.x-FFC131.svg?logo=tauri&logoColor=white)](https://tauri.app/)
+[![MCP](https://img.shields.io/badge/MCP-Protocol-0098FF.svg)](https://modelcontextprotocol.io/)
+[![Stars](https://img.shields.io/github/stars/CreamyLong/quill?style=social)](https://github.com/CreamyLong/quill/stargazers)
+[![Tests](https://img.shields.io/badge/tests-408%20passed-brightgreen.svg)](./backend/)
+[![Downloads](https://img.shields.io/github/downloads/CreamyLong/quill/total)](https://github.com/CreamyLong/quill/releases)
+
+[Website](https://github.com/CreamyLong/quill) · [Docs](./docs/) · [Quick Start](#-quick-start) · [Desktop App](#-desktop-app-tauri-2) · [Skills](./skills/) · [Contributing](./CONTRIBUTING.md)
 
 </div>
 
-Quill is an open-source super agent framework. With sub-agent orchestration, sandbox execution, and an extensible skills system, it helps you accomplish multimodal work — research, coding, data analysis, document generation, and more.
+---
+
+## 🤔 Why Quill?
+
+Quill is a **super-agent framework** — an AI that can research, code, analyze data, generate documents, and orchestrate sub-agents to do almost anything. Unlike closed-source alternatives, Quill is fully open-source, self-hostable, and extensible.
+
+| Feature | Quill | OpenAI Codex | Cursor | Claude Code | DeerFlow | OpenClaw |
+|---|---|---|---|---|---|---|
+| **Open source** | ✅ Apache 2.0 | ❌ | ❌ | ❌ | ✅ MIT | ✅ MIT |
+| **Self-hosted** | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Sandboxed execution** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Sub-agent orchestration** | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| **Desktop app** | ✅ Tauri | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **MCP integration** | ✅ Dual-role | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Skills marketplace** | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Session forking** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **FTS5 search** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Multi-agent teams** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Workflow engine** | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Self-improving skills** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Adaptive permissions** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **IM channels (5+)** | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Tool receipts** | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+
+---
+
+## ✨ Core Capabilities
+
+### 🔬 Deep Research
+Multi-source search with cross-validation and cited reports. Quill orchestrates multiple sub-agents to investigate topics in depth.
+
+### 💻 Sandboxed Code Execution
+Safely run Python / Bash / file operations in an isolated sandbox environment with full filesystem access. OS-level security with network isolation.
+
+### 🤖 Sub-Agent Orchestration
+Main agent dispatches specialized sub-agents for parallel complex tasks — general-purpose, bash, research, and custom agents. Up to 128 concurrent sub-agents with AgentSwarm.
+
+### 🧩 Skills Marketplace
+Install skills to extend capabilities. Build custom extensions with lifecycle hooks (pre_model, post_model, pre_tool, post_tool). Install from GitHub repos or any URL.
+
+### 🔀 Session Forking
+Branch any conversation at any point. Forked threads carry full conversation history via checkpoint copy — experiment without disrupting the original.
+
+### 🔍 FTS5 Session Search
+BM25-ranked full-text search across all thread messages with snippet extraction and prefix matching. Find any past conversation instantly.
+
+### 🧠 Long-Term Memory & Dreaming
+Continuously records user profile and conversation history with confidence-based fact eviction. Background "dreaming" consolidation promotes short-term signals to durable long-term memory.
+
+### 🤝 Multi-Agent Teams
+Supervisor, round-robin, handoff, and hierarchical team patterns. Shared task board with DAG dependencies and peer messaging.
+
+### 🔄 Workflow Engine
+DAG-based agent orchestration with parallel execution, retry, and conditional branching. Build complex multi-step automations.
+
+### 🛡️ Safety & Guardrails
+Tools declare safety properties (read-only, destructive, idempotent, open-world) that feed into risk-level-based authorization. Deterministic security scanner blocks malicious skills offline.
+
+### 💓 Proactive Heartbeat
+Periodic agent turns that check whether anything needs attention — with a persistent monitor checklist, active-hours windows, and cost-controlled isolated sessions.
+
+### 🌐 Multi-Model & Multi-Platform
+DeepSeek / OpenAI / Anthropic / vLLM / Ollama and more. UI supports 8 languages. IM channels: Telegram, Slack, Discord, Feishu, DingTalk.
+
+### 🖥️ Native Desktop App
+Tauri 2 desktop app with native filesystem access, system tray, workspace sync, and auto-updates. Available for macOS, Windows, and Linux.
+
+---
+
+## 🚀 Quick Start
+
+### Option 1: Desktop App (Recommended)
+
+Download the latest release for your platform from the [Releases](https://github.com/CreamyLong/quill/releases) page.
+
+```bash
+# macOS
+brew install --cask quill  # coming soon
+
+# Or download .dmg/.msi/.AppImage from Releases
+```
+
+### Option 2: Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/CreamyLong/quill.git
+cd quill
+
+# Interactive setup wizard (2 minutes)
+make setup
+
+# Start all services with hot-reload
+make dev
+
+# Open http://localhost:2126 in your browser
+```
+
+### Option 3: Docker
+
+```bash
+docker compose up -d
+# Open http://localhost:2126
+```
+
+### Option 4: Desktop Development
+
+```bash
+# One-command desktop (builds frontend, starts Gateway, launches Tauri)
+make desktop
+
+# Or manually:
+cd desktop
+npm install
+npm run tauri dev    # first build ~3-5 min, then incremental
+
+# Production build → .dmg/.msi/.AppImage
+npm run tauri build
+```
 
 ---
 
@@ -54,29 +180,31 @@ graph TB
     subgraph "Client Layer"
         WEB[Next.js Frontend<br/>React + Tailwind]
         IM[IM Channels<br/>Telegram, Slack, Discord<br/>Feishu, DingTalk]
+        DESK[Desktop App<br/>Tauri 2]
     end
 
     subgraph "Gateway Layer (Port 8001)"
-        GW[Gateway API<br/>FastAPI + LangGraph Runtime]
+        GW[Gateway API<br/>LangGraph Runtime]
         SB[Stream Bridge<br/>SSE Delivery]
         RM[Run Manager<br/>Task Lifecycle]
     end
 
     subgraph "Agent Runtime"
         LA[Lead Agent<br/>StateGraph]
-        MW[Middleware Chain<br/>25+ Middlewares]
+        MW[Middleware Chain<br/>38+ Middlewares]
         SA[Sub-Agent Executor<br/>Thread Pool]
     end
 
     subgraph "Infrastructure"
         DB[(Database<br/>SQLite / Postgres)]
-        SK[Skills System<br/>SKILL.md + Extensions]
-        MCP[MCP Servers<br/>Multi-Protocol]
+        SK[Skills System<br/>SKILL.md + Marketplace]
+        MCP[MCP Servers<br/>Dual-Role]
         MEM[Memory System<br/>LLM Extraction + Eviction]
     end
 
     WEB -->|HTTP/SSE| GW
     IM -->|Webhook| GW
+    DESK -->|HTTP/SSE| GW
     GW --> LA
     GW --> SB
     GW --> RM
@@ -94,7 +222,7 @@ graph TB
 ```mermaid
 flowchart LR
     START([START]) --> PREP[Prepare<br/>Inject System Prompt]
-    PREP --> BM[beforeModel<br/>25+ Hooks]
+    PREP --> BM[beforeModel<br/>38+ Hooks]
     BM --> MODEL[Model Call<br/>LLM Inference]
     MODEL --> AM[afterModel<br/>Post-Processing]
     AM --> TOOLS{Tool Calls?}
@@ -180,125 +308,6 @@ sequenceDiagram
     LA-->>U: Response with results
 ```
 
-### Extension System Architecture
-
-```mermaid
-flowchart TB
-    subgraph "Extension Lifecycle"
-        DISC[Discovery<br/>Scan extension.yaml]
-        VAL[Validation<br/>Manifest + Hooks]
-        LOAD[Load Module<br/>Dynamic Import]
-        INIT[Initialize<br/>Setup Resources]
-        REG[Register Hooks<br/>Lifecycle Middleware]
-        EXEC[Execute Hooks<br/>pre/post model/tool]
-        DISP[Dispose<br/>Cleanup on Remove]
-    end
-
-    subgraph "Hook Phases"
-        PRE_M[pre_model]
-        POST_M[post_model]
-        PRE_T[pre_tool]
-        POST_T[post_tool]
-        ON_START[on_agent_start]
-        ON_END[on_agent_end]
-    end
-
-    DISC --> VAL --> LOAD --> INIT --> REG
-    REG --> EXEC
-    EXEC --> DISP
-
-    REG --- PRE_M
-    REG --- POST_M
-    REG --- PRE_T
-    REG --- POST_T
-    REG --- ON_START
-    REG --- ON_END
-
-    style DISC fill:#dbeafe,stroke:#1e40af
-    style LOAD fill:#fef3c7,stroke:#92400e
-    style EXEC fill:#dcfce7,stroke:#166534
-    style DISP fill:#fee2e2,stroke:#991b1b
-```
-
----
-
-## ✨ Core Capabilities
-
-| Capability | Description |
-|-----------|-------------|
-| **Deep Research** | Multi-source search + cross-validation + cited reports |
-| **Code Execution** | Safely run Python / Bash / file operations in a sandbox |
-| **Sub-Agent Collaboration** | Main agent dispatches sub-agents for parallel complex tasks |
-| **Extensible Skills** | Install skills to extend capabilities (academic review, PPT, charts, GitHub research, and more) |
-| **Extension System** | Build plugins with lifecycle hooks (pre_model, post_model, pre_tool, post_tool) |
-| **Long-Term Memory** | Continuously records user profile and conversation history with eviction policies |
-| **Multi-Model** | DeepSeek / OpenAI / Anthropic / vLLM / Ollama and more |
-| **Multi-Language** | UI supports 8 languages: English, 中文, 한국어, 日本語, Français, Русский, Español, العربية |
-| **IM Channels** | Telegram, Slack, Discord, Feishu, DingTalk integration |
-| **Scheduled Tasks** | Cron/interval-driven scheduled runs with multi-instance support |
-| **Self-Improving Skills** | Agent autonomously creates and improves skills after complex tasks (inspired by Hermes Agent) |
-| **Adaptive Permissions** | Progressive trust levels from Strict → Full based on session history (inspired by OpenClaw) |
-| **Observability Dashboard** | System-wide token usage, cost analytics, and activity metrics |
-| **Multi-Agent Coordination** | Supervisor, round-robin, handoff, and hierarchical team patterns (inspired by CrewAI/AutoGen) |
-| **Workflow Engine** | DAG-based agent orchestration with parallel execution and retry (inspired by DeerFlow) |
-| **Tool Receipts** | Deterministic verification layer for agent tool calls (inspired by DeerFlow 2.0) |
-| **Memory Invalidation** | Stale/contradictory fact detection with three-tier memory model |
-| **MCP Dual-Role** | Quill is both MCP client and server (inspired by OpenClaw) |
-| **Depth-Aware Policy** | Subagents lose dangerous tools as nesting depth increases |
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 22+ / pnpm 10+
-- Python 3.12+ (optional, for sandbox execution)
-
-### Local Development
-
-```bash
-git clone https://github.com/<your-org>/quill.git
-cd quill
-make setup        # interactive wizard, done in ~2 minutes
-make dev          # start services, open http://localhost:2126
-```
-
-### Docker Deployment
-
-```bash
-docker compose up -d
-```
-
-### Desktop App (Tauri 2)
-
-```bash
-# One-command desktop (builds frontend, starts Gateway, launches Tauri)
-make desktop
-
-# Or manually:
-cd desktop
-npm install
-npm run tauri dev    # first build ~3-5 min, then incremental
-
-# Production build
-npm run tauri build  # → .dmg/.msi/.AppImage
-```
-
-The desktop app auto-launches the Gateway, provides native filesystem access, system tray, workspace sync, and auto-updates. See [desktop/README.md](desktop/README.md) for full documentation.
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 15 · React 19 · Tailwind CSS · shadcn/ui |
-| **Backend** | LangGraph · TypeScript · FastAPI (Python) |
-| **Database** | SQLite / PostgreSQL · LangGraph Checkpointer |
-| **Agent Runtime** | StateGraph · 25+ Middlewares · Sub-Agent Executor |
-| **Protocols** | MCP (Model Context Protocol) · SSE · HTTP/SSE/Stdio |
-
 ---
 
 ## 📦 Skills & Extensions Ecosystem
@@ -311,6 +320,33 @@ Quill ships with 20+ built-in skills: academic review, deep research, data analy
 - `on_agent_start` / `on_agent_end` — setup and cleanup
 
 Connect additional MCP services via `extensions_config.json`.
+
+### Install from Marketplace
+
+```bash
+# Install from GitHub repo
+curl -X POST http://localhost:8001/skills/marketplace/install \
+  -H "Content-Type: application/json" \
+  -d '{"source": "github", "target": "owner/repo"}'
+
+# Install from URL
+curl -X POST http://localhost:8001/skills/marketplace/install \
+  -H "Content-Type: application/json" \
+  -d '{"source": "url", "target": "https://example.com/skill.md"}'
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 15 · React 19 · Tailwind CSS · shadcn/ui |
+| **Backend** | LangGraph · TypeScript · node:sqlite |
+| **Desktop** | Tauri 2 (Rust + WebView) |
+| **Database** | SQLite / PostgreSQL · LangGraph Checkpointer |
+| **Agent Runtime** | StateGraph · 38+ Middlewares · Sub-Agent Executor |
+| **Protocols** | MCP (Model Context Protocol) · SSE · HTTP/SSE/Stdio |
 
 ---
 
@@ -333,10 +369,60 @@ Switch languages in Settings → Appearance → Language.
 
 ---
 
+## 📊 Competitive Analysis
+
+Quill was systematically evaluated against 10 leading harness frameworks. See [harness-framework-comparison.md](./docs/harness-framework-comparison.md) for the full analysis.
+
+**Quill matches or exceeds all 10 frameworks on 18 of 22 capability dimensions.**
+
+| Framework | Stars | LangGraph | Sandbox | Memory | MCP | Sub-Agent | Desktop | Teams | Search |
+|---|---|---|---|---|---|---|---|---|---|
+| **Quill** | ⭐ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DeerFlow | ⭐⭐⭐⭐⭐ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| OpenWork | ⭐⭐⭐ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| DeepSeek Harness | ⭐⭐⭐ | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| Kimi Code | ⭐⭐⭐⭐ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| OpenAI Codex | ⭐⭐⭐⭐⭐ | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| CrewAI | ⭐⭐⭐⭐⭐ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
+| AutoGen | ⭐⭐⭐⭐ | ❌ | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ |
+| OpenClaw | ⭐⭐⭐ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Hermes Agent | ⭐⭐⭐ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+
+---
+
 ## 🤝 Contributing
 
-Issues and PRs are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+Issues and PRs are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+
+Areas where we especially need help:
+- 🌍 **Translations** — help us support more languages
+- 🧩 **Skills** — create and share new skills
+- 📖 **Documentation** — improve docs, write tutorials
+- 🐛 **Bug reports** — file issues with reproduction steps
+- ⭐ **Star the repo** — if you find Quill useful, a star goes a long way!
+
+---
 
 ## 📜 License
 
 [Apache 2.0](./LICENSE)
+
+---
+
+## ⭐ Star History
+
+If Quill is useful to you, please consider giving it a star! Stars help others discover the project and motivate continued development.
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=CreamyLong/quill&type=Date)](https://star-history.com/#CreamyLong/quill&Date)
+
+</div>
+
+---
+
+<div align="center">
+
+**Built with ❤️ by the Quill team · Inspired by OpenWork, DeerFlow, OpenClaw, Hermes Agent, Kimi Code, Codex, CrewAI, AutoGen, and awesome-harness-engineering**
+
+</div>
