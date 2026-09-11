@@ -2,7 +2,7 @@
  * Metrics API client — observability dashboard data.
  */
 
-import { getApiBaseUrl } from "@/core/api/utils";
+import { getBackendBaseURL } from "@/core/config";
 
 export interface TokenMetrics {
   total_tokens: number;
@@ -44,7 +44,7 @@ export interface ToolsResponse extends ToolStats {
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const base = getApiBaseUrl();
+  const base = getBackendBaseURL();
   const res = await fetch(`${base}${path}`, { credentials: "include" });
   if (!res.ok) {
     throw new Error(`Metrics API error: ${res.status}`);

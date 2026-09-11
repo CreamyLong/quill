@@ -18,7 +18,6 @@ import {
 import { useMemo } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useI18n } from "@/core/i18n/hooks";
 
 interface MetricsDashboardProps {
   tokens: {
@@ -43,8 +42,6 @@ function formatTokens(tokens: number): string {
 }
 
 export function MetricsDashboard({ tokens, estimatedCostUsd }: MetricsDashboardProps) {
-  const { t } = useI18n();
-
   const modelEntries = useMemo(
     () =>
       Object.entries(tokens.by_model)
@@ -68,10 +65,10 @@ export function MetricsDashboard({ tokens, estimatedCostUsd }: MetricsDashboardP
     <div className="space-y-6 p-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">
-          {t.metrics?.title ?? "Observability Dashboard"}
+          Observability Dashboard
         </h2>
         <p className="text-muted-foreground text-sm">
-          {t.metrics?.description ?? "System-wide token usage, cost, and activity metrics."}
+          System-wide token usage, cost, and activity metrics.
         </p>
       </div>
 
