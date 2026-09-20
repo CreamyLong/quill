@@ -5,6 +5,26 @@ All notable changes to Quill are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-09-21
+
+### Added
+
+#### Framework Competitiveness Update (10 frameworks analyzed)
+
+- **progressive-skills:** 3-level progressive skill loading (catalog → summary → deep dive) with intent-term ranking, inspired by Hermes Agent and DeerFlow 2.0. Reduces token usage by only loading full skill content when needed.
+- **context-modes:** Isolated and snapshot context delivery for subagents, with auto-suggestion based on task characteristics. Inspired by DeerFlow 2.0 and awesome-harness-engineering.
+- **state-machine-guardrails:** Phase-dependent tool access control (planning → research → implementation → review → cleanup) with per-phase tool group policies. Inspired by awesome-harness-engineering and DeerFlow RBAC.
+- **adaptive-orchestration:** Dynamic coordination topology selection (parallel/sequential/hierarchical/hybrid) based on task dependency graph analysis. Inspired by awesome-harness-engineering AdaptOrch and CrewAI.
+- **extension-manager:** Five contribution kinds (middleware, lifecycle hooks, observers, gateway services, HTTP routers) with enable/disable lifecycle and dependency resolution. Inspired by DeerFlow 2.0 and OpenClaw plugin SDK.
+- **compute-worker-pool:** CPU admission-controlled worker pool with task priority, bounded queue, overload handling, and graceful shutdown. Inspired by OpenClaw WorkerTaskPool.
+- **two-phase-memory:** Parallel rollout extraction + serialized global consolidation memory pipeline. Inspired by OpenAI Codex CLI.
+
+#### Documentation
+- Updated harness-framework-comparison.md with full analysis of 10 frameworks (OpenWork, DeepSeek Harness, OpenClaw, Hermes Agent, Kimi Code CLI, OpenAI Codex, DeerFlow, AutoGen, CrewAI, awesome-harness-engineering).
+
+### Testing
+- Added 65 new tests across 5 test files for all new feature modules.
+
 ## [2.0.0] — 2026-06-15
 
 Quill 2.0 is a ground-up rewrite around a "super agent" harness with
