@@ -44,3 +44,28 @@ export {
   getMemoryContext,
   type MemoryUpdaterOptions,
 } from "./updater.js";
+
+// Memory diagnostics and repair (v0.5.0)
+export {
+  type MemoryFact,
+  type MemoryHealthScore,
+  type MemoryHealthIssue,
+  type MemoryHealthReport,
+  type FactGraphNode,
+  type FactGraphEdge,
+  type FactGraph,
+  type RepairAction,
+  type MemoryRepair,
+  type RepairReport,
+  type MemoryDiagnosticsConfig,
+  DEFAULT_DIAGNOSTICS_CONFIG,
+} from "./health_types.js";
+
+export {
+  MemoryDiagnostics,
+  buildFactGraph,
+} from "./diagnostics.js";
+
+export {
+  MemoryRepairEngine,
+} from "./repair.js";

@@ -105,7 +105,29 @@ Rule of thumb: **root `make` = the full application**; **`backend/Makefile` and 
 
 ## Recent Competitive Updates (2026-09)
 
-Quill was systematically evaluated against 10 leading harness frameworks (OpenWork, DeepSeek Harness, OpenClaw, Hermes Agent, Kimi Code CLI, OpenAI Codex, DeerFlow, AutoGen, CrewAI). The following capabilities were added or enhanced based on that analysis:
+Quill was systematically evaluated against 11 leading harness frameworks/products (ZCode, OpenWork, DeepSeek Harness, awesome-harness-engineering, DeerFlow, CrewAI, AutoGen, Kimi Code CLI, OpenAI Codex, OpenClaw, Hermes Agent). The following capabilities were added or enhanced based on that analysis:
+
+### v0.6.0 (ZCode Sync — Round 3)
+
+- **Elicitation System** (`agents/elicitation/`) — Proactive ambiguity detection that generates structured clarifying questions before the agent commits to expensive runs. Scores 5 dimensions (missing context, vagueness, underspecified goal, contradiction, insufficient detail). Inspired by ZCode's Elicitation runtime.
+- **Context Rot Detection** (`agents/middlewares/context_rot_detector.ts`) — Real-time context health monitoring (token bloat, tool staleness, repetition, fragmentation). Auto-triggers compaction/forking. Inspired by awesome-harness-engineering.
+- **Workflow Concurrency Control** (`workflows/concurrency_control.ts`) — Runtime concurrency adjustment for running workflows without stopping. Event-driven queue management. Inspired by ZCode v3.14.3.
+- **Two-Stage Classifier** (`agents/middlewares/two_stage_classifier.ts`) — Fast heuristic gate before expensive reasoning. Classifies minimal/standard/deep. Inspired by awesome-harness-engineering.
+- **ACP Adapter** (`integrations/acp/`) — Agent Client Protocol JSON-RPC server for IDE integration (Zed, JetBrains, VS Code). Inspired by Kimi Code CLI's ACP adapter.
+- **Funnel Telemetry** (`telemetry/funnel.ts`) — Drop-off analysis for user journeys across interaction stages. Inspired by ZCode's Funnel Telemetry.
+- **Computer Use Agent** (`agents/cua/`) — Desktop automation broker with fail-closed privacy (PrivacyGuard) and immutable audit trail (CuaAuditLog). Inspired by ZCode's CUA.
+
+### v0.5.0 (ZCode Sync — Round 2)
+
+- **Plugin Store** (`plugins/`) — Full plugin lifecycle (install/configure/enable/disable/uninstall/restore) with marketplace, CDN distribution, personal sources. Inspired by ZCode's plugin store.
+- **Hooks System** (`hooks/`) — 13 lifecycle event types with trust management, blockable hooks, tool/prompt modifications. Inspired by ZCode + Kimi Code.
+- **Memory Diagnostics** (`agents/memory/diagnostics.ts`) — Health scoring, staleness detection, contradiction analysis, fact graph, auto-repair. Inspired by ZCode.
+- **Conversation Telemetry** (`telemetry/`) — Token usage by model/time, tool patterns, cost tracking, session analytics. Inspired by ZCode + Kimi Code.
+- **Model Trajectory** (`agents/trajectory/`) — Decision path recording with directed graph, replay capability. Inspired by ZCode + DeepSeek Harness.
+- **Universal MCP Rail** (`mcp/capability_registry.ts`) — Two-tool capability federation (search_capabilities + execute_capability). Inspired by OpenWork.
+- **Architecture Policy** (`scripts/architecture/`) — Automated enforcement: file size limits, import cycle detection, module boundaries. Inspired by ZCode.
+
+### v0.4.0 (Round 1)
 
 - **Self-Improving Skills** (`tools/skill_manage_tool.ts`) — Agent autonomously creates/patches/deletes skills in `skills/custom/` after complex tasks. Gated by `skill_evolution.enabled` in config. Ports Hermes Agent's learning loop.
 - **Adaptive Permissions** (`guardrails/adaptive_permissions.ts`) — Progressive trust levels (0-4) that auto-advance based on session count, success ratio, and account age. Inspired by OpenClaw + awesome-harness-engineering.

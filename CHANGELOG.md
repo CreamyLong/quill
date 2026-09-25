@@ -2,8 +2,114 @@
 
 All notable changes to Quill are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+The format is based on [KeepaChangelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.6.0] — 2026-09-26
+
+### Added
+
+#### ZCode Sync & Framework Competitiveness Update (Round 3)
+
+Systematic evaluation of 11 frameworks/products (ZCode v3.14.x, OpenWork, DeepSeek Harness, awesome-harness-engineering, DeerFlow, CrewAI, AutoGen, Kimi Code CLI, OpenAI Codex, OpenClaw, Hermes Agent). Seven new feature systems ported:
+
+- **elicitation-system:** Proactive ambiguity detection that generates structured clarifying questions before the agent commits to a full run. Scores user messages across 5 dimensions (missing context, vagueness, underspecified goal, contradiction, insufficient detail). Inspired by ZCode's Elicitation runtime and awesome-harness-engineering's "Context Rot" detection.
+- **context-rot-detector:** Real-time context health monitoring middleware that detects degradation from token bloat, tool result staleness, repetition loops, and topic fragmentation. Auto-triggers compaction/forking recommendations. Inspired by awesome-harness-engineering's "Context Rot" pattern.
+- **workflow-concurrency-control:** Runtime concurrency adjustment for running workflows without stopping. Queue management with event emission for real-time UI status. Inspired by ZCode v3.14.3's dynamic concurrency limit.
+- **two-stage-classifier:** Fast heuristic gate before expensive chain-of-thought reasoning. Classifies messages as minimal/standard/deep via pattern matching + word count + thread history, attaching reasoningLevel hints to thread state. Inspired by awesome-harness-engineering's "Two-Stage Classifier" pattern.
+- **funnel-telemetry:** Drop-off analysis for user journeys across key interaction stages (session → message → tool → result). Identifies UX friction points and reliability issues. Inspired by ZCode's Funnel Telemetry.
+- **computer-use-agent (CUA):** Desktop automation broker with fail-closed privacy design. PrivacyGuard with configurable rules (allowed/confirm/blocked), CuaAuditLog for immutable action trail. Inspired by ZCode's CUA with broker architecture.
+
+#### New Modules
+
+```
+agents/elicitation/    — Elicitation system
+  index.ts             — Public API
+  detector.ts          — AmbiguityDetector (5-dimension scoring)
+  engine.ts            — ElicitationEngine (question generation)
+  store.ts             — ElicitationStore (session lifecycle)
+agents/middlewares/
+  context_rot_detector.ts — ContextRotDetector middleware
+  two_stage_classifier.ts — TwoStageClassifier middleware
+workflows/
+  concurrency_control.ts  — ConcurrencyGovernor (runtime limit adjustment)
+integrations/acp/      — Agent Client Protocol adapter
+  index.ts             — Public API
+  types.ts             — ACP type definitions (sessions, messages, approvals)
+  server.ts            — AcpServer (JSON-RPC 2.0 over HTTP + WebSocket)
+agents/cua/            — Computer Use Agent
+  index.ts             — Public API
+  broker.ts            — CuaBroker (privacy + execution pipeline)
+  privacy.ts           — PrivacyGuard (fail-closed rules)
+  audit.ts             — CuaAuditLog (immutable audit trail)
+telemetry/
+  funnel.ts            — FunnelTelemetry (drop-off analysis)
+```
+
+### Testing
+- Unit tests for all new modules follow existing `__tests__/` pattern.
+- Funnel analysis validated against multi-session drop-off scenarios.
+- Privacy guard tested with sensitive-file and dangerous-command patterns.
+- Concurrency governor tested with limit-increase/decrease during active runs.
+
+### Documentation
+- Updated harness-framework-comparison.md with v0.6.0 analysis.
+- Updated AGENTS.md with new feature documentation.
+
+## [0.5.0] — 2026-09-21
+
+### Added
+
+#### ZCode Sync & Framework Competitiveness Update (Round 2)
+
+Systematic evaluation of 11 frameworks/products (ZCode, OpenWork, DeepSeek Harness, awesome-harness-engineering, DeerFlow, CrewAI, AutoGen, Kimi Code CLI, OpenAI Codex, OpenClaw, Hermes Agent). Seven new feature systems ported:
+
+- **plugin-store:** Full plugin lifecycle management (install/configure/enable/disable/uninstall/restore) with marketplace browsing, CDN distribution, personal sources, and featured plugin curation. Inspired by ZCode's plugin store and OpenClaw's ClawHub. Includes `PluginManifest`, `PluginStore`, `PluginLifecycleManager`.
+- **hooks-system:** User-configurable workspace hooks with 13 lifecycle event types (PreToolUse, PostToolUse, SessionStart, SessionEnd, etc.), trust management, blockable hooks, tool input modifications, and prompt modifications. Inspired by ZCode's workspace hooks and Kimi Code's lifecycle hook system.
+- **memory-diagnostics:** Memory health dashboard with staleness detection, contradiction analysis, fact graph visualization, health scoring (0-100), and auto-repair for stale/contradictory memories. Inspired by ZCode's memory diagnostics and awesome-harness-engineering's self-correcting memory.
+- **conversation-telemetry:** Comprehensive analytics dashboard with token usage by model/time, tool call frequency, session duration distribution, success/failure rates, and cost tracking with configurable model pricing. Inspired by ZCode's conversation telemetry and Kimi Code's usage analytics.
+- **model-trajectory:** Model decision path recording (user_message → llm_call → tool_call → tool_result → ...) with directed graph representation, replay capability, and decision pattern analysis. Inspired by ZCode's model trajectory recording and DeepSeek Harness's session log replay.
+- **universal-mcp-rail:** Two universal tools (`search_capabilities` + `execute_capability`) that federate all capability sources (MCP servers, skills, plugins, builtins) behind a constant 2-tool surface. Inspired by OpenWork's universal MCP rail.
+- **architecture-policy:** Automated architecture enforcement — file size limits (600 lines), import cycle detection, module boundary rules, public API limits, CI-integrated via GitHub Actions. Inspired by ZCode's architecture-policy.yaml.
+
+#### New Modules
+
+```
+plugins/           — Plugin store with lifecycle management
+  types.ts         — Plugin types (PluginManifest, PluginStoreListing, lifecycle states)
+  manifest.ts      — Manifest parsing, validation, serialization
+  store.ts         — PluginStore with marketplace + personal sources
+  lifecycle.ts     — PluginLifecycleManager (install/configure/enable/disable/uninstall/restore)
+hooks/             — Workspace hooks system
+  types.ts         — Hook types (HookEvent, HookConfig, HookRequest, HookResult)
+  hooks.ts         — HookEngine with registration and execution
+  config.ts        — Hook creation, validation, trust management, built-in hooks
+agents/memory/     — Memory diagnostics (extended)
+  health_types.ts  — Health types (MemoryFact, MemoryHealthReport, FactGraph, MemoryRepair)
+  diagnostics.ts   — MemoryDiagnostics engine + buildFactGraph
+  repair.ts        — MemoryRepairEngine (propose and apply repairs)
+agents/trajectory/ — Model trajectory recording
+  types.ts         — Trajectory types (TrajectoryNode, TrajectoryEdge, TrajectoryGraph)
+  recorder.ts      — TrajectoryRecorder (build from journal events)
+telemetry/         — Conversation analytics
+  types.ts         — Telemetry types (TokenUsageSummary, ToolUsageSummary, etc.)
+  analytics.ts     — TelemetryAnalytics engine with time-bucketed queries
+mcp/               — Universal MCP rail (extended)
+  rail_types.ts    — Capability types (CapabilityEntry, CapabilitySearchQuery)
+  capability_registry.ts — Federated InMemoryCapabilityRegistry
+scripts/architecture/ — Policy enforcement
+  policy.yaml      — Architecture policy configuration
+  check.py         — Automated policy checker (file size, cycles, boundaries)
+```
+
+### Testing
+- Unit tests for all new modules follow existing `__tests__/` pattern.
+- Architecture policy self-check passes against Quill's own codebase.
+
+### Documentation
+- Updated harness-framework-comparison.md with v0.5.0 analysis.
+- Updated AGENTS.md with new feature documentation.
+- New CI workflow: `.github/workflows/architecture-check.yml`.
 
 ## [0.4.0] — 2026-09-21
 

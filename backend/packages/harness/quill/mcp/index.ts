@@ -20,3 +20,7 @@ export * from "./interceptors.js";
 export * from "./path_rewrite.js";
 export * from "./server.js";
 export * from "./conversational_config.js";
+
+// Universal MCP Rail (v0.5.0)
+export * from "./rail_types.js";
+export * from "./capability_registry.js";

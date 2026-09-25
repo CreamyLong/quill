@@ -1,0 +1,60 @@
+# Architecture policy configuration for Quill.
+#
+# Inspired by ZCode's architecture-policy.yaml with automated checks
+# for module boundaries, file size limits, and import cycle detection.
+#
+# Run with: make architecture-check
+# Or directly: python scripts/architecture/check.py
+
+policy:
+  # Maximum lines per file
+  max_lines_per_file: 600
+
+  # Maximum public methods/interfaces per module
+  max_public_per_module: 15
+
+  # Maximum import depth (relative imports)
+  max_import_depth: 3
+
+  # Forbidden import patterns (regex)
+  forbidden_imports:
+    - "from \\.\\."  # No grandparent imports in leaf modules
+    - "import \\.\\./.*\\.\\."  # No deep relative imports
+
+  # Module boundary rules
+  # Modules in the left set may NOT import from modules in the right set
+  module_boundaries:
+    - from: "quill.tools"
+      to: "quill.agents"
+      rule: "tools may not import from agents"
+    - from: "quill.extensions"
+      to: "quill.tools"
+      rule: "extensions may not import from tools"
+
+  # Required module structure
+  required_files:
+    - "index.ts"  # Every module directory should have an index.ts
+
+  # Exemptions (files that may exceed limits)
+  exemptions:
+    - path: "backend/packages/harness/quill/tools/tools.ts"
+      reason: "Tool registry central file"
+      max_lines: 800
+    - path: "backend/packages/harness/quill/mcp/index.ts"
+      reason: "MCP barrel export file"
+    - path: "backend/packages/harness/quill/extensions/index.ts"
+      reason: "Extensions barrel export file"
+
+# File patterns to check
+include_patterns:
+  - "backend/packages/harness/quill/**/*.ts"
+  - "frontend/**/*.ts"
+  - "frontend/**/*.tsx"
+
+# File patterns to exclude
+exclude_patterns:
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.d.ts"
+  - "**/node_modules/**"
+  - "**/dist/**"

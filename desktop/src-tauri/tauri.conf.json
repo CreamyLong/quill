@@ -1,7 +1,7 @@
 {
   "productName": "Quill Desktop",
-  "version": "0.1.0",
-  "identifier": "com.scitops.desktop",
+  "version": "0.6.0",
+  "identifier": "com.quill.desktop",
   "build": {
     "beforeBuildCommand": "",
     "beforeDevCommand": "",

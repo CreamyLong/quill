@@ -1,14 +1,38 @@
 # Harness Framework Comparison & Suitability Analysis
 
-> **Last updated:** 2026-09-21 (updated from 2026-09-11)
-> **Scope:** Systematic evaluation of 10 leading AI agent harness/framework projects
+> **Last updated:** 2026-09-26 (v0.6.0)
+> **Scope:** Systematic evaluation of 11 leading AI agent harness/framework/workspace projects
 > **Goal:** Identify features to port into Quill for competitive parity and differentiation
 
 ---
 
 ## Executive Summary
 
-Quill is one of the most feature-rich open-source AI agent harnesses, with a mature LangGraph-based architecture, 40+ middleware chain, sandboxed execution, persistent memory with consolidation, MCP integration, sub-agent delegation, Tauri desktop app, multi-platform IM channels, a full workflow engine, and self-improving skills. This analysis identifies **7 new high-impact features** ported in v0.4.0 from leading frameworks.
+Quill is one of the most feature-rich open-source AI agent harnesses, with a mature LangGraph-based architecture, 40+ middleware chain, sandboxed execution, persistent memory with consolidation, MCP integration, sub-agent delegation, Tauri desktop app, multi-platform IM channels, a full workflow engine, and self-improving skills. This analysis identifies **21 high-impact features** ported in v0.4.0, v0.5.0, and v0.6.0 from leading frameworks.
+
+### 2026-09-26 Update (v0.6.0 — ZCode Sync Round 3)
+
+Seven new feature systems ported from 11 frameworks (including ZCode v3.14.x):
+
+1. **Elicitation System** (`agents/elicitation/`) — Proactive ambiguity detection with 5-dimension scoring from ZCode's Elicitation runtime + awesome-harness-engineering's context rot patterns
+2. **Context Rot Detection** (`agents/middlewares/context_rot_detector.ts`) — Real-time context health monitoring from awesome-harness-engineering
+3. **Workflow Concurrency Control** (`workflows/concurrency_control.ts`) — Runtime concurrency adjustment from ZCode v3.14.3
+4. **Two-Stage Classifier** (`agents/middlewares/two_stage_classifier.ts`) — Fast gate before expensive reasoning from awesome-harness-engineering
+5. **ACP Adapter** (`integrations/acp/`) — Agent Client Protocol for IDE integration from Kimi Code CLI
+6. **Funnel Telemetry** (`telemetry/funnel.ts`) — Drop-off analysis for user journeys from ZCode
+7. **Computer Use Agent** (`agents/cua/`) — Desktop automation with fail-closed privacy from ZCode's CUA
+
+### 2026-09-21 Update (v0.5.0 — ZCode Sync Round 2)
+
+Seven new feature systems ported from 11 frameworks (including ZCode):
+
+1. **Plugin Store** (`plugins/`) — Full lifecycle management (install/configure/enable/disable/uninstall/restore) from ZCode's plugin store + OpenClaw's ClawHub
+2. **Hooks System** (`hooks/`) — 13 lifecycle event types with trust management from ZCode's workspace hooks + Kimi Code's lifecycle hooks
+3. **Memory Diagnostics** (`agents/memory/diagnostics.ts`) — Health scoring, staleness, contradiction analysis from ZCode + awesome-harness-engineering
+4. **Conversation Telemetry** (`telemetry/`) — Token/tool/session analytics with cost tracking from ZCode + Kimi Code
+5. **Model Trajectory** (`agents/trajectory/`) — Decision path recording with replay from ZCode + DeepSeek Harness
+6. **Universal MCP Rail** (`mcp/capability_registry.ts`) — Two-tool capability federation from OpenWork
+7. **Architecture Policy** (`scripts/architecture/`) — Automated enforcement from ZCode
 
 ### 2026-09-21 Update (v0.4.0)
 
@@ -40,28 +64,52 @@ Seven new feature systems ported from 10 frameworks:
 | Agent teams/DAG | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
 | Session search | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Cron w/ jitter | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Progressive skills** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Context modes** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **State machine guards** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Adaptive topology** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Extension manager** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Compute worker pool** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| AgentSwarm | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Marketplace | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| SkillScan safety | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Eval framework | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Workflow engine | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Self-improving skills | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Tool receipts | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Adaptive permissions | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Depth-aware policy | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Tool orchestrator | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Progressive skills** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Context modes** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **State machine guards** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Adaptive topology** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Extension manager** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Compute worker pool** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **Plugin store** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Hooks system** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Memory diagnostics** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Conversation telemetry** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Model trajectory** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Universal MCP rail** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Architecture policy** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| AgentSwarm | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Marketplace | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| SkillScan safety | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Eval framework | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Workflow engine | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Self-improving skills | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Tool receipts | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Adaptive permissions | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Depth-aware policy | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Tool orchestrator | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-> ✅ = Full implementation | ❌ = Not present | ✅* = Is the MCP server
+> ✅ = Full implementation | ❌ = Not present | ✅* = Is the MCP server. Columns: Quill | DeerFlow | OpenWork | DeepSeek | Kimi | Codex | CrewAI | AutoGen | OpenClaw | Hermes | ZCode
 
 ---
 
 ## Project Profiles
+
+### 0. ZCode (zai-org) — AI Coding Workspace
+- **Version:** 3.14.0 (open-sourced 2026-09-20) | **Language:** TypeScript (Node.js 24.14) | **License:** Apache-2.0
+- **Architecture:** pnpm monorepo with Electron desktop + Web + CLI, strict architecture governance via `architecture-policy.yaml`
+- **Key differentiators:**
+  - Dynamic Workflow Engine: typed, compilable TypeScript orchestration scripts with site graphs, causality analysis, and crash recovery
+  - Plugin Store: full lifecycle management with official marketplace, CDN distribution, personal sources, featured plugins
+  - Hooks System: workspace hooks with config mutation, trust grants, and lifecycle events
+  - Memory Diagnostics: health monitoring, staleness detection, contradiction analysis
+  - Conversation Telemetry: detailed analytics on token usage, tool patterns, session metrics
+  - Model Trajectory: recording and replay of model decision paths
+  - Architecture Policy: automated enforcement (400 line/file limit, no cyclic imports, module boundaries)
+  - Formal Proof: state-space enumeration of product behaviors for correctness verification
+  - CUA (Computer Use Agent): broker architecture with fail-closed privacy design
+  - Remote Workspace: SSH/WSL support with SFTP-based asset upload
+  - Cross-platform: Windows, macOS, Linux with systematic compatibility
+- **Ports to Quill:** Plugin store (`plugins/`), hooks system (`hooks/`), memory diagnostics (`agents/memory/diagnostics.ts`), conversation telemetry (`telemetry/`), model trajectory (`agents/trajectory/`), architecture policy (`scripts/architecture/`)
 
 ### 1. OpenWork (different-ai) — Cross-Agent Workflow Orchestration
 - **Stars:** 23.7k | **Language:** TypeScript | **License:** MIT (core)
