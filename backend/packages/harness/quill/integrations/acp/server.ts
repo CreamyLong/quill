@@ -230,7 +230,7 @@ export class AcpServer {
     const content = params.content as string;
     const session = this.sessions.get(sessionId);
     if (!session) {
-      throw new Error(`Session not found: `${sessionId}`);
+      throw new Error(`Session not found: ${sessionId}`);
     }
 
     // Add user message.

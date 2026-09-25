@@ -201,4 +201,3 @@ export function contextRotDetector(
 }
 
 export { assess as assessContextHealth };
-export type { ContextRotConfig };

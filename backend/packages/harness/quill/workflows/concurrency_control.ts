@@ -31,7 +31,7 @@ export interface ConcurrencyStatus {
   /** Current concurrency limit. */
   limit: number;
   /** Currently executing nodes. */
-  running: RunningNode();
+  running: RunningNode[];
   /** Queued nodes waiting for concurrency headroom. */
   queued: string[];
   /** Total nodes completed. */
