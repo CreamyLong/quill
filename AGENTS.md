@@ -107,6 +107,17 @@ Rule of thumb: **root `make` = the full application**; **`backend/Makefile` and 
 
 Quill was systematically evaluated against 11 leading harness frameworks/products (ZCode, OpenWork, DeepSeek Harness, awesome-harness-engineering, DeerFlow, CrewAI, AutoGen, Kimi Code CLI, OpenAI Codex, OpenClaw, Hermes Agent). The following capabilities were added or enhanced based on that analysis:
 
+### v0.7.0 (ZCode Sync — Round 4)
+
+- **Off-Peak Tasks** (`scheduling/offpeak.ts`) — Deferred execution with server-admitted tickets, ported from ZCode's "闲时任务" runtime. Ticket state machine (queued/ready/active/settled/expired) with TTL expiry detection and automatic re-ticket; shared `OffPeakScheduler` tick loop gated on an injectable system-idle predicate.
+- **CommandInbox** (`agents/inbox/`) — Serial message queueing while the agent is busy, ported from ZCode's CommandInbox. Bounded FIFO queues (per-thread + global), cancel/reorder/clear, change listeners for the queue panel.
+- **Git Checkpoints & Rewind** (`runtime/checkpoints.ts`) — Workspace snapshots in a hidden git repo (`.quill/checkpoints.git`) that never touches the user's own git history. Per-file rewind, whole-workspace rewind, read-at-checkpoint.
+- **Bash Read-Only Policy** (`guardrails/bash_readonly_policy.ts`) — Structured argv/flag analysis that auto-approves genuinely read-only commands (git/gh/npm/pip/brew/kubectl subcommand semantics, sed -i / find -delete detection, pipeline-wide analysis, hard-deny patterns). Ported from ZCode's bash-readonly-policy handlers.
+- **Auto Review** (`guardrails/auto_review.ts`) — Risk-tiered per-call review by actual effect, ported from DeepSeek Harness: low → allow, medium (irreversible/prod) → require authorization, high (exfiltration across trust boundaries) → hard deny. Structured `AutoReviewDeniedError`; LLM reviewer prompt with the 5 fixed DeepSeek partitions.
+- **Durable Kanban Board** (`multi_agent/kanban.ts`) — Crash-recovering task board ported from Hermes Agent: atomic file persistence, lease-based claims with stale reclaim, attempt exhaustion → blocked, backlog promotion, `KanbanDispatcher` (reclaim → promote → spawn).
+- **ObservationPack** (`agents/middlewares/observation_pack.ts`) — Content-addressed handles (`obs://<id>`) for large/repeated tool results with exact paged recall, ported from the SoL-Pi mechanism (awesome-harness-engineering). LRU + TTL.
+- **Skill Attribution** (`skills/attribution.ts`) — "This answer used skill X" ported from OpenWork: activation tracking, tool-use attribution, contribution inference from the final answer, UI summary line.
+
 ### v0.6.0 (ZCode Sync — Round 3)
 
 - **Elicitation System** (`agents/elicitation/`) — Proactive ambiguity detection that generates structured clarifying questions before the agent commits to expensive runs. Scores 5 dimensions (missing context, vagueness, underspecified goal, contradiction, insufficient detail). Inspired by ZCode's Elicitation runtime.

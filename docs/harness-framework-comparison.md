@@ -1,6 +1,6 @@
 # Harness Framework Comparison & Suitability Analysis
 
-> **Last updated:** 2026-09-26 (v0.6.0)
+> **Last updated:** 2026-09-27 (v0.7.0)
 > **Scope:** Systematic evaluation of 11 leading AI agent harness/framework/workspace projects
 > **Goal:** Identify features to port into Quill for competitive parity and differentiation
 
@@ -8,7 +8,22 @@
 
 ## Executive Summary
 
-Quill is one of the most feature-rich open-source AI agent harnesses, with a mature LangGraph-based architecture, 40+ middleware chain, sandboxed execution, persistent memory with consolidation, MCP integration, sub-agent delegation, Tauri desktop app, multi-platform IM channels, a full workflow engine, and self-improving skills. This analysis identifies **21 high-impact features** ported in v0.4.0, v0.5.0, and v0.6.0 from leading frameworks.
+Quill is one of the most feature-rich open-source AI agent harnesses, with a mature LangGraph-based architecture, 40+ middleware chain, sandboxed execution, persistent memory with consolidation, MCP integration, sub-agent delegation, Tauri desktop app, multi-platform IM channels, a full workflow engine, and self-improving skills. This analysis identifies **29 high-impact features** ported in v0.4.0, v0.5.0, v0.6.0, and v0.7.0 from leading frameworks.
+
+### 2026-09-27 Update (v0.7.0 — ZCode Sync Round 4)
+
+Z.ai open-sourced the entire ZCode workbench at v3.14.3 (Electron desktop + Web + TUI from one binary). A full-source deep dive (GitHub API + DeepWiki) surfaced eight new feature systems, ported alongside the best of the 10 reference frameworks' latest releases:
+
+1. **Off-Peak Tasks** (`scheduling/offpeak.ts`) — ZCode's signature "闲时任务": ticket-admitted deferred execution with expiry detection and automatic re-ticket
+2. **CommandInbox** (`agents/inbox/`) — ZCode's serial message queueing while the agent is busy, with optimistic pending overlay
+3. **Git Checkpoints & Rewind** (`runtime/checkpoints.ts`) — ZCode's gitCheckpointService: hidden-repo workspace snapshots with per-file rewind
+4. **Bash Read-Only Policy** (`guardrails/bash_readonly_policy.ts`) — ZCode's argv-analysis engine that auto-approves genuinely read-only commands (git/gh/npm subcommand semantics)
+5. **Auto Review** (`guardrails/auto_review.ts`) — DeepSeek Harness's 3-tier risk classification by actual effect (high = exfiltration across trust boundaries → hard deny)
+6. **Durable Kanban Board** (`multi_agent/kanban.ts`) — Hermes Agent's crash-recovering task board: lease-based claims, stale reclaim, dispatcher
+7. **ObservationPack** (`agents/middlewares/observation_pack.ts`) — SoL-Pi's content-addressed handles for large/repeated tool results with exact paged recall
+8. **Skill Attribution** (`skills/attribution.ts`) — OpenWork's "this answer used skill X": activation tracking + contribution inference
+
+Also fixed: a real pass^k aliasing bug in the evaluation runner (trial-0's score object was mutated mid-aggregation).
 
 ### 2026-09-26 Update (v0.6.0 — ZCode Sync Round 3)
 
@@ -87,6 +102,14 @@ Seven new feature systems ported from 10 frameworks:
 | Adaptive permissions | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Depth-aware policy | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Tool orchestrator | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Off-peak tasks** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Command inbox (queue while busy)** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Git checkpoints / rewind** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Bash read-only auto-approve** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Risk-tiered auto review** | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Durable kanban board** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Observation handles** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Skill attribution** | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 > ✅ = Full implementation | ❌ = Not present | ✅* = Is the MCP server. Columns: Quill | DeerFlow | OpenWork | DeepSeek | Kimi | Codex | CrewAI | AutoGen | OpenClaw | Hermes | ZCode
 
@@ -95,21 +118,20 @@ Seven new feature systems ported from 10 frameworks:
 ## Project Profiles
 
 ### 0. ZCode (zai-org) — AI Coding Workspace
-- **Version:** 3.14.0 (open-sourced 2026-09-20) | **Language:** TypeScript (Node.js 24.14) | **License:** Apache-2.0
-- **Architecture:** pnpm monorepo with Electron desktop + Web + CLI, strict architecture governance via `architecture-policy.yaml`
+- **Version:** 3.14.3 (full workbench open-sourced 2026-09-24) | **Language:** TypeScript (Node.js 24.14) | **License:** Apache-2.0
+- **Architecture:** pnpm monorepo with Electron desktop + Web + CLI/TUI, all shipped from one `zcode` binary, strict architecture governance via `architecture-policy.yaml`
 - **Key differentiators:**
+  - Off-Peak Tasks ("闲时任务"): server-admitted ticket system for deferred execution on idle compute — full client/server state machines, ticket expiry + re-ticket
   - Dynamic Workflow Engine: typed, compilable TypeScript orchestration scripts with site graphs, causality analysis, and crash recovery
+  - CommandInbox: mid-run messages queued with optimistic overlay, admitted serially
+  - Git Checkpoints: hidden-repo workspace snapshots with per-file/per-message rewind
+  - Bash read-only policy engine (~25 files): structured argv analysis incl. git/gh subcommand semantics
   - Plugin Store: full lifecycle management with official marketplace, CDN distribution, personal sources, featured plugins
   - Hooks System: workspace hooks with config mutation, trust grants, and lifecycle events
-  - Memory Diagnostics: health monitoring, staleness detection, contradiction analysis
-  - Conversation Telemetry: detailed analytics on token usage, tool patterns, session metrics
-  - Model Trajectory: recording and replay of model decision paths
-  - Architecture Policy: automated enforcement (400 line/file limit, no cyclic imports, module boundaries)
-  - Formal Proof: state-space enumeration of product behaviors for correctness verification
-  - CUA (Computer Use Agent): broker architecture with fail-closed privacy design
-  - Remote Workspace: SSH/WSL support with SFTP-based asset upload
-  - Cross-platform: Windows, macOS, Linux with systematic compatibility
-- **Ports to Quill:** Plugin store (`plugins/`), hooks system (`hooks/`), memory diagnostics (`agents/memory/diagnostics.ts`), conversation telemetry (`telemetry/`), model trajectory (`agents/trajectory/`), architecture policy (`scripts/architecture/`)
+  - ZCode Protocol V4: versioned client-agnostic protocol (TUI/desktop/Web interchangeable) with cold-session resume
+  - Remote Workspaces (SSH/WSL) + mobile remote control through an external relay
+  - Automations (cron/interval) feeding IM bots; Claude Code session migration; conversation sharing; whiteboard; @-mentions and /-capability pickers; CUA with fail-closed privacy; Formal Proof state-space verification
+- **Ports to Quill (through v0.7.0):** Off-peak tasks (`scheduling/offpeak.ts`), CommandInbox (`agents/inbox/`), git checkpoints (`runtime/checkpoints.ts`), bash read-only policy (`guardrails/bash_readonly_policy.ts`), plugin store (`plugins/`), hooks system (`hooks/`), memory diagnostics (`agents/memory/diagnostics.ts`), conversation telemetry (`telemetry/`), model trajectory (`agents/trajectory/`), architecture policy (`scripts/architecture/`), elicitation, context rot detection, workflow concurrency control, two-stage classifier, funnel telemetry, CUA
 
 ### 1. OpenWork (different-ai) — Cross-Agent Workflow Orchestration
 - **Stars:** 23.7k | **Language:** TypeScript | **License:** MIT (core)

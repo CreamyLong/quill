@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Quill Desktop</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e6e8ee;
+    }
+    .card { text-align: center; }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto 16px;
+      border: 3px solid #2a2f3d;
+      border-top-color: #7c8cf8;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status { color: #9aa3b5; font-size: 14px; min-height: 20px; }
+    .error { color: #f88; white-space: pre-wrap; max-width: 480px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner"></div>
+    <div class="status" id="status">Starting Quill Desktop…</div>
+  </div>
+  <script>
+    // The real UI is served by the local Next.js server on :3100, started by
+    // the Rust shell alongside the gateway on :8200. Poll until it answers,
+    // then hand over. The Rust side also navigates us directly once healthy.
+    (function poll(attempt) {
+      fetch("http://127.0.0.1:3100/", { mode: "no-cors" })
+        .then(function () { window.location.replace("http://127.0.0.1:3100/"); })
+        .catch(function () {
+          if (attempt > 120) {
+            document.getElementById("status").className = "status error";
+            document.getElementById("status").textContent =
+              "Quill Desktop could not start its local server.\n" +
+              "Please make sure Node.js (18+) is installed and restart the app.";
+            return;
+          }
+          setTimeout(function () { poll(attempt + 1); }, 1000);
+        });
+    })(0);
+  </script>
+</body>
+</html>

@@ -1,12 +1,12 @@
 {
   "productName": "Quill Desktop",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "identifier": "com.quill.desktop",
   "build": {
-    "beforeBuildCommand": "",
+    "beforeBuildCommand": "node scripts/prepare-bundle.mjs",
     "beforeDevCommand": "",
     "devUrl": "http://localhost:3100",
-    "frontendDist": "../../frontend/.quill-dist"
+    "frontendDist": "../dist"
   },
   "app": {
     "windows": [
@@ -42,7 +42,7 @@
       "icons/icon.ico"
     ],
     "externalBin": [],
-    "resources": [],
+    "resources": ["bundles/**/*"],
     "copyright": "© 2026 Quill Contributors",
     "publisher": "Quill"
   },

@@ -14,7 +14,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.x-FFC131.svg?logo=tauri&logoColor=white)](https://tauri.app/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-0098FF.svg)](https://modelcontextprotocol.io/)
 [![Stars](https://img.shields.io/github/stars/CreamyLong/quill?style=social)](https://github.com/CreamyLong/quill/stargazers)
-[![Tests](https://img.shields.io/badge/tests-408%20passed-brightgreen.svg)](./backend/)
+[![Tests](https://img.shields.io/badge/tests-583%20passed-brightgreen.svg)](./backend/)
 [![Downloads](https://img.shields.io/github/downloads/CreamyLong/quill/total)](https://github.com/CreamyLong/quill/releases)
 
 [Website](https://github.com/CreamyLong/quill) · [Docs](./docs/) · [Quick Start](#-quick-start) · [Desktop App](#-desktop-app-tauri-2) · [Skills](./skills/) · [Contributing](./CONTRIBUTING.md)
@@ -44,6 +44,12 @@ Quill is a **super-agent framework** — an AI that can research, code, analyze 
 | **Adaptive permissions** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **IM channels (5+)** | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | **Tool receipts** | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Off-peak deferred tasks** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Message queue while busy** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Workspace checkpoints / rewind** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Read-only command auto-approve** | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **Risk-tiered tool review** | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Durable kanban board** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 

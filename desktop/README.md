@@ -16,7 +16,8 @@ Desktop shell for Quill using **Tauri 2** (Rust + System WebView). Replaces the 
 |---------|-------------|
 | **Native File Access** | Open any folder on your host filesystem — no virtual `/mnt` sandbox |
 | **System Tray** | Runs in background; quick access via tray menu |
-| **Auto-Start Gateway** | Launches the TS Gateway automatically — no `make dev` needed |
+| **Auto-Start Full Stack** | Launches the TS Gateway (:8200) **and** the Next.js frontend server (:3100) automatically — no `make dev` needed |
+| **Self-Contained Bundle** | Backend + frontend + production dependencies ship inside the app (out of the box; requires only Node.js ≥ 18) |
 | **Workspace Sync** | Incremental sync between local workspace and Gateway |
 | **System Integration** | Clipboard, notifications, window management, file manager reveal |
 | **Auto-Update** | Built-in updater via Tauri v2 |
@@ -52,8 +53,16 @@ Desktop shell for Quill using **Tauri 2** (Rust + System WebView). Replaces the 
           ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  TypeScript Gateway (auto-launched child process)            │
-│  Port 8200 (configurable) · LangGraph runtime               │
-│  + Desktop Sync API (/api/desktop/sync/*)                   │
+│  Port 8200 (fixed in production) · LangGraph runtime         │
+│  + Desktop Sync API (/api/desktop/sync/*)                    │
+├─────────────────────────────────────────────────────────────┤
+│  Next.js standalone server (auto-launched child process)     │
+│  Port 3100 · serves the UI, proxies /api/* → :8200           │
+├─────────────────────────────────────────────────────────────┤
+│  Bundled resources (production build)                        │
+│  backend-bundle/  — gateway + compiled backend + prod deps   │
+│  frontend-bundle/ — Next standalone server + static assets   │
+│  config.example.yaml — seeds the user config on first run    │
 └─────────────────────────────────────────────────────────────┘
 ```
 

@@ -5,6 +5,48 @@ All notable changes to Quill are documented in this file.
 The format is based on [KeepaChangelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-09-27
+
+### Added
+
+#### ZCode Sync & Framework Competitiveness Update (Round 4)
+
+Systematic evaluation of 11 frameworks/products (ZCode v3.14.3 full-source, OpenWork v0.18.54, DeepSeek Harness dsh-v0.1.7, OpenClaw 2026.9.6, Hermes Agent v0.21.5, Kimi Code 2.1.1, OpenAI Codex 0.157, awesome-harness-engineering, DeerFlow 2.1.0, Agent Framework 1.19, CrewAI 1.15.22). Eight new feature systems ported:
+
+- **off-peak-tasks:** Deferred execution with server-admitted tickets, ported from ZCode's signature "闲时任务" runtime. Users queue expensive tasks to run while the system is idle; admission is ticket-based (queued → ready → active → settled/expired) with TTL expiry detection and automatic re-ticket + resume. Two cooperating state machines (task + ticket), one shared scheduler/dispatch pipeline. `scheduling/offpeak.ts`
+- **command-inbox:** Serial message queueing while the agent is busy, ported from ZCode's CommandInbox. Mid-run user messages are queued with an optimistic pending overlay instead of dropped, then admitted FIFO when the current run finishes. Bounded per-thread and global queues, cancel/reorder/clear, change listeners for the queue panel. `agents/inbox/`
+- **git-checkpoints:** Workspace snapshots with per-file rewind, ported from ZCode's gitCheckpointService. Checkpoints live in a hidden git repository (`.quill/checkpoints.git`) inside the workspace — the user's own git history is never touched. Single-file rewind, whole-workspace rewind, and read-at-checkpoint without restoring. `runtime/checkpoints.ts`
+- **bash-readonly-policy:** Safe auto-approval of read-only shell commands via structured argv/flag analysis, ported from ZCode's bash-readonly-policy handlers. Subcommand semantics for git/gh/npm/pip/brew/kubectl, in-place and destructive flag detection (sed -i, find -delete, git branch -D), pipeline-wide analysis (every segment must be read-only), redirect/substitution handling, and hard-deny patterns (rm -rf, dd of=, curl|sh, fork bombs). `guardrails/bash_readonly_policy.ts`
+- **auto-review:** Risk-tiered per-call review of tool invocations, ported from DeepSeek Harness's Auto Review. Every tool call is classified by actual effect: low (allow), medium (irreversible deletion / force push / production ops → require authorization), high (sensitive data exfiltration across trust boundaries → hard deny even when requested). Structured `AutoReviewDeniedError`, internal-host exemption, LLM reviewer prompt with the 5 fixed DeepSeek partitions. `guardrails/auto_review.ts`
+- **kanban-board:** Durable, crash-recovering task board with dispatcher, ported from Hermes Agent's kanban system. File-backed with atomic writes (no native deps); full lifecycle (backlog → ready → claimed → in_review → done, blocked with reasons), lease-based claims with stale reclaim, attempt counting with exhaustion → blocked, backlog promotion, and a `KanbanDispatcher` that reclaims/promotes/spawns. `multi_agent/kanban.ts`
+- **observation-pack:** Stable handles for large, repeated tool results, ported from the SoL-Pi ObservationPack mechanism (NVIDIA, via awesome-harness-engineering). Results above a threshold are parked in a content-addressed store; the model context receives a compact card with an `obs://<handle>` and can recall exact character pages on demand. Identical payloads dedupe to the same handle; LRU eviction and TTL. `agents/middlewares/observation_pack.ts`
+- **skill-attribution:** "This answer used skill X", ported from OpenWork's Library attribution. Tracks skill activations during a run, attributes tool calls to the active skill, infers contribution from the final answer text (name hits + salient description terms), and produces a UI-ready summary line. `skills/attribution.ts`
+
+#### New Modules
+
+```
+scheduling/offpeak.ts            — OffPeakTaskStore + TicketAdmission + OffPeakScheduler
+agents/inbox/                    — CommandInbox (serial message queueing)
+  command_inbox.ts               — FIFO queue with admission control
+  index.ts                       — Public API
+runtime/checkpoints.ts           — GitCheckpointService (snapshot + rewind)
+guardrails/bash_readonly_policy.ts — BashReadonlyPolicy (argv analysis)
+guardrails/auto_review.ts        — AutoReviewer (3-tier risk classification)
+multi_agent/kanban.ts            — KanbanBoard + KanbanDispatcher
+agents/middlewares/observation_pack.ts — ObservationStore + middleware
+skills/attribution.ts            — SkillAttributionTracker
+```
+
+### Fixed
+
+- **evaluation pass^k aliasing bug:** trial-0's score object was shared between `taskScores` and `resultsByTask`, so the pass^k aggregation mutated it mid-computation and reported "Failed 2/3" when only 1 trial failed. All trials now store copies.
+- **files-tree tests realigned** with the intentional auto-create + lazy single-level tree behavior.
+
+### Testing
+
+- 107 new unit tests across the 8 modules (backend suite: 476 → 583, all passing).
+- Checkpoint tests exercise real git on temp workspaces; kanban tests verify durability across board instances; bash policy tests cover 40+ command classifications.
+
 ## [0.6.0] — 2026-09-26
 
 ### Added

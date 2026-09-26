@@ -93,11 +93,10 @@ jobs:
           cd frontend
           pnpm install --frozen-lockfile
 
-      - name: Build frontend
+      - name: Install backend dependencies
         run: |
-          cd frontend
-          # Use webpack (not Turbopack) for production builds
-          npx next build
+          cd backend
+          npm ci
 
       - name: Install desktop deps
         run: |
@@ -167,11 +166,10 @@ jobs:
           cd frontend
           pnpm install --frozen-lockfile
 
-      - name: Build frontend
+      - name: Install backend dependencies
         run: |
-          cd frontend
-          # Use webpack (not Turbopack) for production builds
-          npx next build
+          cd backend
+          npm ci
 
       - name: Install desktop deps
         run: |
@@ -244,11 +242,10 @@ jobs:
           cd frontend
           pnpm install --frozen-lockfile
 
-      - name: Build frontend
+      - name: Install backend dependencies
         run: |
-          cd frontend
-          # Use webpack (not Turbopack) for production builds
-          npx next build
+          cd backend
+          npm ci
 
       - name: Install desktop deps
         run: |

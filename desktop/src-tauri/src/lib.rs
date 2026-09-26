@@ -27,8 +27,11 @@ pub fn run() {
             }
         }))
         .manage(Mutex::new(gateway::GatewayProcess {
-            child: None,
-            port: 8200,
+            gateway: None,
+            frontend: None,
+            port: gateway::GATEWAY_PORT,
+            frontend_port: gateway::FRONTEND_PORT,
+            last_error: None,
         }))
         .invoke_handler(tauri::generate_handler![
             // Filesystem bridge
@@ -77,8 +80,29 @@ pub fn run() {
             if let Err(e) = tray::setup_tray(app.handle()) {
                 eprintln!("Failed to setup tray: {}", e);
             }
+            // Auto-start the local stack (gateway :8200 + frontend :3100) and
+            // navigate the window once healthy. Failures surface through
+            // gateway_status / the placeholder page's own polling.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                match tauri::async_runtime::block_on(gateway::start_gateway(handle, None)) {
+                    Ok(port) => println!("[desktop] local stack ready on frontend port {port}"),
+                    Err(e) => eprintln!("[desktop] failed to start local stack: {e}"),
+                }
+            });
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // Kill the child servers on real exit so no orphans are left
+            // behind (SIGTERM does not run Drop on the managed state).
+            if let tauri::RunEvent::Exit = event {
+                if let Some(state) = app.try_state::<Mutex<gateway::GatewayProcess>>() {
+                    if let Ok(mut gp) = state.lock() {
+                        gp.shutdown();
+                    }
+                }
+            }
+        });
 }

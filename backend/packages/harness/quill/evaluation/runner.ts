@@ -133,9 +133,11 @@ export async function runBenchmark(options: EvalRunnerOptions): Promise<EvalRepo
         details: score.details,
       };
 
-      // Collect per-task scores for pass^k aggregation.
+      // Collect per-task scores for pass^k aggregation. Always store a copy:
+      // the aggregation pass below mutates the taskScores entry in place, and
+      // an aliased trial-0 entry would corrupt the failure count mid-computation.
       const existing = resultsByTask.get(task.id) ?? [];
-      existing.push(trialIndex === 0 ? taskScore : { ...taskScore, taskId: `${task.id}#trial${trialIndex}` });
+      existing.push(trialIndex === 0 ? { ...taskScore } : { ...taskScore, taskId: `${task.id}#trial${trialIndex}` });
       resultsByTask.set(task.id, existing);
 
       // Only emit one entry per task (the first trial) in the report.

@@ -70,9 +70,13 @@ afterAll(() => {
 describe("GET /threads/{id}/files/tree", () => {
   const threadId = "test-tree-thread";
 
-  it("returns 404 for unknown thread", async () => {
+  it("auto-creates unknown thread and returns an empty tree (not 404)", async () => {
+    // Client-generated UUIDs hit this endpoint before the thread is created,
+    // so the gateway auto-creates it and returns an empty tree.
     const r = await req("GET", `/threads/no-such-thread/files/tree`);
-    expect(r.status).toBe(404);
+    expect(r.status).toBe(200);
+    expect(r.json.type).toBe("directory");
+    expect(r.json.children).toEqual([]);
   });
 
   it("returns tree for default sandbox (empty)", async () => {
@@ -86,7 +90,7 @@ describe("GET /threads/{id}/files/tree", () => {
     expect(r.json.path).toContain(".scitops");
   });
 
-  it("returns tree with override workspace_directory (ignores .git/node_modules)", async () => {
+  it("returns single-level tree with override workspace_directory (ignores .git/node_modules)", async () => {
     // PATCH the thread metadata to set the override.
     await req("PATCH", `/threads/${threadId}`, {
       metadata: { workspace_directory: baseDir },
@@ -102,10 +106,15 @@ describe("GET /threads/{id}/files/tree", () => {
     expect(names).toContain("src");
     expect(names).not.toContain(".git");
     expect(names).not.toContain("node_modules");
-    // One level deep: src is a directory with children.
+    // Lazy loading: subdirectories come back with children undefined until
+    // the frontend expands them (children are fetched via ?path=<subdir>).
     const src = root.children.find((c: any) => c.name === "src");
     expect(src.type).toBe("directory");
-    expect(src.children.map((c: any) => c.name).sort()).toContain("index.ts");
-    expect(src.children.find((c: any) => c.name === "utils").type).toBe("directory");
+    expect(src.children).toBeUndefined();
+    // Expanding src via ?path= returns its children.
+    const r2 = await req("GET", `/threads/${threadId}/files/tree?path=src`);
+    expect(r2.status).toBe(200);
+    expect(r2.json.children.map((c: any) => c.name).sort()).toContain("index.ts");
+    expect(r2.json.children.find((c: any) => c.name === "utils").type).toBe("directory");
   });
 });

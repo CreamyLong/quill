@@ -6,6 +6,8 @@
 
 import path from "node:path";
 
+import { projectRoot } from "./runtime_paths.js";
+
 export type DatabaseBackend = "memory" | "sqlite" | "postgres";
 
 export interface DatabaseConfig {
@@ -33,9 +35,14 @@ export function buildDatabaseConfig(input: Partial<DatabaseConfig> = {}): Databa
 
 /**
  * Resolve sqlite_dir to an absolute path.
+ *
+ * Relative dirs (the default `.scitops/data`) resolve against the project
+ * root — NOT the process cwd. GUI-launched processes (the desktop app) run
+ * with cwd `/`, which previously produced `/.scitops/data` and an ENOENT
+ * crash at startup.
  */
 export function resolveSqliteDir(config: DatabaseConfig): string {
-  return path.resolve(config.sqliteDir);
+  return path.resolve(projectRoot(), config.sqliteDir);
 }
 
 /**
