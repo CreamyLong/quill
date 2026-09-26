@@ -261,9 +261,21 @@ jobs:
         with:
           tagName: ${{ needs.meta.outputs.tag }}
           releaseName: "Quill Desktop ${{ needs.meta.outputs.tag }}"
+          releaseBody: |
+            Quill Desktop ${{ needs.meta.outputs.tag }}
+
+            ## Download
+            - **macOS Apple Silicon**: `Quill.Desktop_${{ needs.meta.outputs.version }}_aarch64.dmg`
+            - **macOS Intel**: `Quill.Desktop_${{ needs.meta.outputs.version }}_x64.dmg`
+            - **Windows**: `Quill.Desktop_${{ needs.meta.outputs.version }}_x64-setup.exe`
+            - **Linux (deb)**: `Quill.Desktop_${{ needs.meta.outputs.version }}_amd64.deb`
+            - **Linux (rpm)**: `Quill.Desktop-${{ needs.meta.outputs.version }}-1.x86_64.rpm`
           releaseDraft: true
           prerelease: false
           projectPath: "desktop"
+          # linuxdeploy/AppImage fails with the ~500MB bundled resources;
+          # deb + rpm cover the Linux install base.
+          args: "--bundles deb,rpm"
 
   # ── Publish release (wait for all builds) ─────────────────────────
   publish:
