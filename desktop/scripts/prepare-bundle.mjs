@@ -37,8 +37,15 @@ function log(msg) {
   console.log(`[prepare-bundle] ${msg}`);
 }
 
+// Windows resolves npm/pnpm/npx through .cmd shims that execFileSync cannot
+// spawn directly — use the .cmd names there.
+const IS_WIN = process.platform === "win32";
+function cmdFor(cmd) {
+  return IS_WIN && ["npm", "pnpm", "npx"].includes(cmd) ? `${cmd}.cmd` : cmd;
+}
+
 function run(cmd, args, opts = {}) {
-  execFileSync(cmd, args, { stdio: "inherit", ...opts });
+  execFileSync(cmdFor(cmd), args, { stdio: "inherit", ...opts });
 }
 
 function copyDir(src, dest, filter) {
