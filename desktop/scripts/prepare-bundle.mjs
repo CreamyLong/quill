@@ -45,7 +45,11 @@ function cmdFor(cmd) {
 }
 
 function run(cmd, args, opts = {}) {
-  execFileSync(cmdFor(cmd), args, { stdio: "inherit", ...opts });
+  const resolved = cmdFor(cmd);
+  // Node >= 20.12 blocks spawning .cmd/.bat without a shell (CVE-2024-27980);
+  // all our args are simple flags, so cmd.exe quoting is safe here.
+  const needsShell = IS_WIN && resolved.endsWith(".cmd");
+  execFileSync(resolved, args, { stdio: "inherit", shell: needsShell, ...opts });
 }
 
 function copyDir(src, dest, filter) {
