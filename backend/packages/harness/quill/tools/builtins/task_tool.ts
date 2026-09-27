@@ -57,6 +57,14 @@ export interface TaskToolDeps {
   subagents?: SubagentSpec[];
   /** Default subagent type when the model omits one. */
   defaultSubagent?: string;
+  /**
+   * Deterministic acceptance-criteria checker (DeerFlow 2.1.0 sync). Given
+   * the declared criteria and the subagent's final result, returns a
+   * rendered verdict block to append to the tool result ("" when criteria
+   * did not hold / are not checkable). The composition root wires this with
+   * the workspace root and recorded executions from thread history.
+   */
+  acceptanceChecker?: (criteria: string[], final: SubagentFinalResult) => string;
 }
 
 /**
@@ -117,7 +125,7 @@ export function createTaskTool(deps: TaskToolDeps): StructuredToolInterface {
 
   return tool(
     async (
-      input: { description: string; prompt: string; subagent_type?: string },
+      input: { description: string; prompt: string; subagent_type?: string; acceptance_criteria?: string[] },
       config?: RunnableConfig
     ): Promise<ToolMessage> => {
       const subagentType = input.subagent_type?.trim() || defaultType;
@@ -138,7 +146,29 @@ export function createTaskTool(deps: TaskToolDeps): StructuredToolInterface {
       // the persisted `subagent.*` events, and the `ToolMessage` all agree
       // on one id.
       const taskId = final.taskId;
-      return makeTaskToolMessage(taskId, final);
+      // DeerFlow acceptance criteria: when the delegation declared criteria,
+      // the harness (not the subagent) verifies them and appends a verdict
+      // block the lead agent must treat as ground truth.
+      let acceptanceBlock = "";
+      if (
+        deps.acceptanceChecker !== undefined &&
+        Array.isArray(input.acceptance_criteria) &&
+        input.acceptance_criteria.length > 0
+      ) {
+        acceptanceBlock = deps.acceptanceChecker(input.acceptance_criteria, final);
+      }
+      const message = makeTaskToolMessage(taskId, final);
+      if (acceptanceBlock !== "") {
+        return new ToolMessage({
+          content: `${message.content}\n\n${acceptanceBlock}`,
+          tool_call_id: message.tool_call_id,
+          additional_kwargs: {
+            ...message.additional_kwargs,
+            acceptance_criteria: input.acceptance_criteria,
+          },
+        });
+      }
+      return message;
     },
     {
       name: "task",
@@ -164,6 +194,16 @@ export function createTaskTool(deps: TaskToolDeps): StructuredToolInterface {
           .string()
           .optional()
           .describe(`Which subagent to use. Defaults to '${defaultType}'. ALWAYS PROVIDE THIS PARAMETER THIRD.`),
+        acceptance_criteria: z
+          .array(z.string())
+          .optional()
+          .describe(
+            [
+              "Deterministic acceptance criteria the harness verifies after the subagent finishes (DeerFlow sync).",
+              "Formats: 'file:<path> exists', 'file:<path> non-empty', 'file_written:<path>', 'tests_passed:<command>'.",
+              "Verdicts are checked in code (not self-reported) and appended to the result — declare them when the task has concrete, verifiable outputs.",
+            ].join(" "),
+          ),
       }),
     },
   );

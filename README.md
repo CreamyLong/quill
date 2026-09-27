@@ -80,16 +80,16 @@ Continuously records user profile and conversation history with confidence-based
 Supervisor, round-robin, handoff, and hierarchical team patterns. Shared task board with DAG dependencies and peer messaging.
 
 ### 🔄 Workflow Engine
-DAG-based agent orchestration with parallel execution, retry, and conditional branching. Build complex multi-step automations.
+DAG-based agent orchestration with parallel execution, retry, and conditional branching — plus **dynamic workflows**: author orchestration as plain TypeScript scripts (top-level `await`, `agent()/ask()/run()` facade) with journal-backed amend/resume so finished steps are never re-paid.
 
 ### 🛡️ Safety & Guardrails
-Tools declare safety properties (read-only, destructive, idempotent, open-world) that feed into risk-level-based authorization. Deterministic security scanner blocks malicious skills offline.
+Tools declare safety properties (read-only, destructive, idempotent, open-world) that feed into risk-level-based authorization. Deterministic security scanner blocks malicious skills offline. Delegated subagent results are verified by deterministic acceptance criteria (file existence, recorded test runs) — not self-reported.
 
 ### 💓 Proactive Heartbeat
-Periodic agent turns that check whether anything needs attention — with a persistent monitor checklist, active-hours windows, and cost-controlled isolated sessions.
+Periodic agent turns that check whether anything needs attention — with a persistent monitor checklist, active-hours windows, and cost-controlled isolated sessions. Scheduled-task outcomes can be delivered straight to your IM (Slack / Feishu / DingTalk / Telegram webhooks).
 
 ### 🌐 Multi-Model & Multi-Platform
-DeepSeek / OpenAI / Anthropic / vLLM / Ollama and more. UI supports 8 languages. IM channels: Telegram, Slack, Discord, Feishu, DingTalk.
+DeepSeek / OpenAI / Anthropic / vLLM / Ollama and more, with role→model overlay routing. UI supports 8 languages. IM channels: Telegram, Slack, Discord, Feishu, DingTalk. Conversations can be shared via sanitized, integrity-hashed read-only links — and imported from Claude Code.
 
 ### 🖥️ Native Desktop App
 Tauri 2 desktop app with native filesystem access, system tray, workspace sync, and auto-updates. Available for macOS, Windows, and Linux.

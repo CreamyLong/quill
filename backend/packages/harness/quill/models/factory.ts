@@ -32,6 +32,7 @@ import type { AppConfig, ModelConfig } from "../config/app_config.js";
 import { ClaudeChatModel } from "./claude_provider.js";
 import { CodexChatModel } from "./openai_codex_provider.js";
 import { MindIEChatModel } from "./mindie_provider.js";
+import { overlayModelFor } from "./llm_overlay.js";
 import { PatchedChatOpenAI } from "./patched_openai.js";
 import { PatchedChatDeepSeek } from "./patched_deepseek.js";
 import { PatchedChatMiMo } from "./patched_mimo.js";
@@ -46,6 +47,11 @@ export interface CreateChatModelOptions {
   appConfig?: AppConfig;
   /** When true (default), attach tracing callbacks directly to the model instance. */
   attachTracing?: boolean;
+  /**
+   * Agent role used for llm_overlay routing (CrewAI sync): when an overlay
+   * scope is active and maps this role, the mapped model is built instead.
+   */
+  role?: string;
   /** Extra constructor kwargs forwarded to the provider. */
   [key: string]: unknown;
 }
@@ -255,7 +261,7 @@ export function applyStreamChunkTimeoutDefault(modelUsePath: string, settings: R
  * @param options Explicit `appConfig`, `attachTracing`, and extra constructor kwargs.
  */
 export function createChatModel(name?: string | null, thinkingEnabled = false, options: CreateChatModelOptions = {}): BaseChatModel {
-  const { appConfig, attachTracing = true, ...kwargs } = options;
+  const { appConfig, attachTracing = true, role, ...kwargs } = options;
 
   const config = appConfig ?? getAppConfig();
   let modelName = name ?? null;
@@ -264,6 +270,11 @@ export function createChatModel(name?: string | null, thinkingEnabled = false, o
       throw new Error("No models configured");
     }
     modelName = config.models[0].name;
+  }
+  // llm_overlay routing (CrewAI sync): an active overlay scope may remap the
+  // model for this agent role before config resolution.
+  if (role !== undefined && modelName !== null) {
+    modelName = overlayModelFor(role, modelName);
   }
   const modelConfig = config.models.find((m) => m.name === modelName);
   if (modelConfig === undefined) {

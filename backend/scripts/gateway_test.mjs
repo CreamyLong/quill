@@ -91,7 +91,8 @@ function finalValuesMessages(events) {
 }
 
 async function main() {
-  const server = buildServer(["Hello there, friend.", "Second answer."]);
+  const handle = buildServer(["Hello there, friend.", "Second answer."]);
+  const server = handle.server;
   await new Promise((resolve) => server.listen(PORT, resolve));
 
   try {
@@ -170,6 +171,7 @@ async function main() {
     console.log("\nAll gateway tests passed.");
   } finally {
     server.close();
+    handle.stopScheduledTasks?.();
   }
 }
 

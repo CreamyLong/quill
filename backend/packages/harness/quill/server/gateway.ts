@@ -58,6 +58,28 @@ import {
 } from "../uploads/manager.js";
 import { getAppConfig } from "../config/app_config.js";
 import { getPaths } from "../config/paths.js";
+import {
+  ConversationShareStore,
+  buildShareProjection,
+  importSharedConversation,
+  newShareId,
+  type RawShareMessage,
+} from "../runtime/sharing.js";
+import {
+  migrateClaudeCodeSession,
+  scanClaudeCodeSessions,
+} from "../migrations/claude_code.js";
+import {
+  DynamicWorkflowService,
+  type WorkflowDriver,
+} from "../workflows/dynamic/index.js";
+import {
+  DEPRECATION_HEADER,
+  PROTOCOL_VERSION_HEADER,
+  SERVER_VERSION_HEADER,
+  buildHelloResponse,
+  negotiateProtocolVersion,
+} from "./protocol_version.js";
 import { ExtensionsConfig } from "../config/extensions_config.js";
 import {
   validateToolEntries,
@@ -401,6 +423,12 @@ export interface GatewayDeps {
   scheduledTaskStore?: ScheduledTaskStore | null;
   /** Tick interval (ms) for the built-in scheduled-task scheduler. Default: 30_000. */
   scheduledTaskTickMs?: number;
+  /**
+   * Driver for dynamic workflow scripts (ZCode sync). When absent, a default
+   * driver routes every facade call (agent/ask/run) through one-off agent
+   * runs, subject to the same guardrails as interactive runs.
+   */
+  dynamicWorkflowDriver?: WorkflowDriver | null;
   /**
    * Checkpointer for session forking. When set, the fork endpoint copies
    * checkpoints so the new thread has the full conversation history.
@@ -842,6 +870,82 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     return DEFAULT_USER.id;
   }
 
+  // ── Dynamic workflow service (ZCode sync) ────────────────────────────────
+  // Default driver: every facade call (agent/ask/run) executes as a one-off
+  // agent run in a fresh thread, subject to the same guardrails (bash
+  // read-only policy, auto review, sandbox) as interactive runs. The
+  // composition root may inject a richer driver (e.g. subagent-backed).
+  function makeDefaultDynamicWorkflowDriver(): WorkflowDriver {
+    async function runOneOffPrompt(prompt: string, label: string): Promise<string> {
+      const threadId = randomUUID();
+      const t = getOrCreateThread(threadId, { source: "dynamic-workflow", dwf_step: label });
+      const runId = randomUUID();
+      const run: RunRecord = {
+        run_id: runId,
+        thread_id: threadId,
+        status: "running",
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        metadata: { source: "dynamic-workflow", dwf_step: label },
+        messages: [],
+      };
+      t.runs.set(runId, run);
+      t.status = "busy";
+      try {
+        const context: Record<string, unknown> = {
+          user_id: DEFAULT_USER.id,
+          source: "dynamic-workflow",
+          dwf_step: label,
+        };
+        const graphForRun = typeof deps.graph === "function" ? deps.graph(context) : deps.graph;
+        const iterable = await graphForRun.stream(
+          { messages: [new HumanMessage({ content: prompt, id: runId })] },
+          {
+            configurable: { thread_id: threadId, ...context },
+            context,
+            streamMode: ["values"],
+            metadata: { thread_id: threadId, run_id: runId, source: "dynamic-workflow" },
+            recursionLimit: 100,
+          },
+        );
+        let finalValues: Record<string, unknown> | undefined;
+        for await (const chunk of iterable as AsyncIterable<unknown>) {
+          if (Array.isArray(chunk) && chunk.length === 2 && chunk[0] === "values") {
+            finalValues = chunk[1] as Record<string, unknown>;
+          } else {
+            finalValues = chunk as Record<string, unknown>;
+          }
+        }
+        const messages = (finalValues?.messages as BaseMessage[] | undefined) ?? [];
+        const lastAi = [...messages].reverse().find((m) => m._getType() === "ai");
+        return typeof lastAi?.content === "string" ? lastAi.content : JSON.stringify(lastAi?.content ?? null);
+      } finally {
+        t.status = "idle";
+        run.status = "success";
+        run.updated_at = nowIso();
+        t.updated_at = nowIso();
+        persistThread(t);
+      }
+    }
+    return {
+      createActorSession: (name, prompt) => runOneOffPrompt(prompt, `actor:${name}`),
+      startAsk: (prompt, opts) =>
+        runOneOffPrompt(
+          prompt,
+          typeof opts?.label === "string" ? `ask:${opts.label}` : "ask",
+        ),
+      runCommand: (command) =>
+        runOneOffPrompt(
+          `Run this shell command and return its output verbatim, with no commentary:\n\n${command}`,
+          `run:${command.slice(0, 40)}`,
+        ),
+    };
+  }
+
+  const dwfService = new DynamicWorkflowService({
+    driver: deps.dynamicWorkflowDriver ?? makeDefaultDynamicWorkflowDriver(),
+  });
+
   async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
     const method = req.method ?? "GET";
@@ -852,6 +956,34 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
     if (method === "OPTIONS") {
       res.writeHead(204, corsHeaders(req));
       res.end();
+      return;
+    }
+
+    // --- Protocol versioning (ZCode Protocol V4 patterns) ---
+    // Every response advertises the server's protocol version; requests may
+    // pin an older one (served with a deprecation header) but a newer one
+    // fails fast with the supported range.
+    const negotiation = negotiateProtocolVersion(req.headers[PROTOCOL_VERSION_HEADER] as string | undefined);
+    res.setHeader(SERVER_VERSION_HEADER, String(negotiation.version));
+    if (negotiation.status === "deprecated") {
+      res.setHeader(DEPRECATION_HEADER, `protocol-version=${negotiation.version}`);
+    }
+    if (negotiation.status === "unsupported") {
+      sendJson(req, res, 400, {
+        detail: negotiation.error,
+        supported_versions: negotiation.supportedVersions,
+      });
+      return;
+    }
+    if ((p === "/protocol/hello" || pathname === "/api/protocol/hello") && (method === "GET" || method === "POST")) {
+      let clientCapabilities: unknown;
+      if (method === "POST") {
+        clientCapabilities = ((await readJson(req).catch(() => ({}))) as Record<string, unknown>).capabilities;
+      } else {
+        const raw = url.searchParams.get("capabilities");
+        clientCapabilities = raw !== null ? raw.split(",").map((c) => c.trim()) : undefined;
+      }
+      sendJson(req, res, 200, buildHelloResponse(clientCapabilities));
       return;
     }
 
@@ -1690,6 +1822,213 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
       }
       sendJson(req, res, 200, [view]);
       return;
+    }
+
+    // --- Conversation sharing (ZCode ConversationShareService, self-hosted) ---
+    const shareStore = new ConversationShareStore();
+    if (p === "/shares" && method === "POST") {
+      const body = (await readJson(req).catch(() => ({}))) as {
+        thread_id?: string;
+        title?: string;
+        access_mode?: "private" | "link_viewer" | "link_editor";
+      };
+      const threadId = body.thread_id;
+      if (!threadId) {
+        sendJson(req, res, 400, { detail: "thread_id is required" });
+        return;
+      }
+      const t = threads.get(threadId);
+      if (!t) {
+        sendJson(req, res, 404, { detail: "Thread not found" });
+        return;
+      }
+      // Prefer the event-store view (survives summarization compaction).
+      let rawMessages: RawShareMessage[] = [];
+      try {
+        const records = await eventStore.listMessages(threadId, { limit: 5000 });
+        rawMessages = records.map((r) => {
+          const m = r.content as BaseMessage;
+          return {
+            role: m._getType(),
+            content: m.content,
+            timestamp: (m.additional_kwargs as { timestamp?: string } | undefined)?.timestamp,
+          };
+        });
+      } catch {
+        rawMessages = ((t.values.messages as BaseMessage[] | undefined) ?? []).map((m) => ({
+          role: m._getType(),
+          content: m.content,
+        }));
+      }
+      const projection = buildShareProjection({
+        id: newShareId(),
+        title: body.title ?? ((t.metadata as { name?: string } | undefined)?.name ?? "Shared conversation"),
+        accessMode: body.access_mode ?? "link_editor",
+        messages: rawMessages,
+      });
+      const shareId = shareStore.create(projection, threadId);
+      sendJson(req, res, 201, { share_id: shareId, url: `/share/${shareId}`, access_mode: projection.share.access_mode });
+      return;
+    }
+    if (p === "/shares" && method === "GET") {
+      sendJson(req, res, 200, { shares: shareStore.list() });
+      return;
+    }
+    const shareItem = p.match(/^\/shares\/([a-f0-9-]{8,64})$/i);
+    if (shareItem) {
+      const shareId = shareItem[1];
+      if (method === "GET") {
+        const projection = shareStore.getForViewer(shareId);
+        if (projection === null) {
+          sendJson(req, res, 404, { detail: "Share not found" });
+          return;
+        }
+        sendJson(req, res, 200, projection);
+        return;
+      }
+      if (method === "DELETE") {
+        const ok = shareStore.revoke(shareId);
+        sendJson(req, res, ok ? 200 : 404, { ok });
+        return;
+      }
+    }
+    const shareImport = p.match(/^\/shares\/([a-f0-9-]{8,64})\/import$/i);
+    if (shareImport && method === "POST") {
+      const projection = shareStore.getForImport(shareImport[1]);
+      if (projection === null) {
+        sendJson(req, res, 404, { detail: "Share not found or not importable" });
+        return;
+      }
+      const result = await importSharedConversation(projection, async (input) => {
+        const threadId = randomUUID();
+        const t = getOrCreateThread(threadId, {
+          name: input.name,
+          imported_from_share: input.importedFromShareId,
+        });
+        t.values = {
+          ...t.values,
+          messages: input.messages.map((m) =>
+            m.role === "user" ? new HumanMessage(m.content) : new AIMessage(m.content),
+          ),
+        };
+        t.updated_at = nowIso();
+        persistThread(t);
+        return { threadId };
+      });
+      sendJson(req, res, 200, result);
+      return;
+    }
+
+    // --- Claude Code session migration (ZCode claudeNativeSessionImport) ---
+    if (p === "/migrations/claude-code/scan" && method === "GET") {
+      sendJson(req, res, 200, { sessions: scanClaudeCodeSessions() });
+      return;
+    }
+    if (p === "/migrations/claude-code/import" && method === "POST") {
+      const body = (await readJson(req).catch(() => ({}))) as { session_id?: string };
+      if (!body.session_id) {
+        sendJson(req, res, 400, { detail: "session_id is required" });
+        return;
+      }
+      const summary = scanClaudeCodeSessions().find((s) => s.sessionId === body.session_id);
+      if (!summary) {
+        sendJson(req, res, 404, { detail: "Claude Code session not found" });
+        return;
+      }
+      const result = await migrateClaudeCodeSession(summary, async (input) => {
+        const threadId = randomUUID();
+        const t = getOrCreateThread(threadId, {
+          name: input.name,
+          migration_source: input.migrationSource,
+          claude_session_id: input.metadata.sessionId,
+        });
+        t.values = {
+          ...t.values,
+          messages: input.messages.map((m) =>
+            m.role === "user" ? new HumanMessage(m.content) : new AIMessage(m.content),
+          ),
+        };
+        t.updated_at = nowIso();
+        persistThread(t);
+        return { threadId };
+      });
+      sendJson(req, res, 200, result);
+      return;
+    }
+
+    // --- Dynamic workflows (ZCode @zcode/dynamic-workflow sync) ---
+    const dwf = p.match(/^\/dynamic-workflows\/([^/]+)(?:\/(events|amend|resume|stop|escalations))?$/);
+    if (p === "/dynamic-workflows" && method === "POST") {
+      const body = (await readJson(req).catch(() => ({}))) as { script?: string; parent_session_id?: string };
+      if (typeof body.script !== "string" || body.script.trim() === "") {
+        sendJson(req, res, 400, { detail: "script is required" });
+        return;
+      }
+      try {
+        const result = dwfService.submit(body.script, { parentSessionId: body.parent_session_id ?? null });
+        sendJson(req, res, 201, result);
+      } catch (err) {
+        sendJson(req, res, 400, { detail: err instanceof Error ? err.message : String(err) });
+      }
+      return;
+    }
+    if (p === "/dynamic-workflows" && method === "GET") {
+      sendJson(req, res, 200, { runs: dwfService.list() });
+      return;
+    }
+    if (dwf !== null) {
+      const runId = decodeURIComponent(dwf[1]);
+      const action = dwf[2];
+      if (action === undefined && method === "GET") {
+        const run = dwfService.get(runId);
+        sendJson(req, res, run === null ? 404 : 200, run === null ? { detail: "Run not found" } : run);
+        return;
+      }
+      if (action === "events" && method === "GET") {
+        sendJson(req, res, 200, { events: dwfService.events(runId) });
+        return;
+      }
+      if (action === "amend" && method === "POST") {
+        const body = (await readJson(req).catch(() => ({}))) as { script?: string };
+        if (typeof body.script !== "string") {
+          sendJson(req, res, 400, { detail: "script is required" });
+          return;
+        }
+        try {
+          sendJson(req, res, 200, dwfService.amend(runId, body.script));
+        } catch (err) {
+          sendJson(req, res, 400, { detail: err instanceof Error ? err.message : String(err) });
+        }
+        return;
+      }
+      if (action === "resume" && method === "POST") {
+        try {
+          sendJson(req, res, 200, dwfService.resume(runId));
+        } catch (err) {
+          sendJson(req, res, 400, { detail: err instanceof Error ? err.message : String(err) });
+        }
+        return;
+      }
+      if (action === "stop" && method === "POST") {
+        sendJson(req, res, (await dwfService.stop(runId)) ? 200 : 404, { ok: true });
+        return;
+      }
+      if (action === "escalations") {
+        if (method === "GET") {
+          sendJson(req, res, 200, { escalations: dwfService.listEscalations(runId) });
+          return;
+        }
+        if (method === "POST") {
+          const body = (await readJson(req).catch(() => ({}))) as { escalation_id?: string; answer?: string };
+          if (!body.escalation_id || typeof body.answer !== "string") {
+            sendJson(req, res, 400, { detail: "escalation_id and answer are required" });
+            return;
+          }
+          const ok = dwfService.resolveQuestion(runId, body.escalation_id, body.answer);
+          sendJson(req, res, ok ? 200 : 404, { ok });
+          return;
+        }
+      }
     }
 
     const stateRoute = p.match(/^\/threads\/([^/]+)\/state$/);

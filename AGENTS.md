@@ -107,6 +107,18 @@ Rule of thumb: **root `make` = the full application**; **`backend/Makefile` and 
 
 Quill was systematically evaluated against 11 leading harness frameworks/products (ZCode, OpenWork, DeepSeek Harness, awesome-harness-engineering, DeerFlow, CrewAI, AutoGen, Kimi Code CLI, OpenAI Codex, OpenClaw, Hermes Agent). The following capabilities were added or enhanced based on that analysis:
 
+### v0.8.0 (ZCode Sync — Round 5)
+
+- **Dynamic Workflows** (`workflows/dynamic/`) — ZCode's flagship `@zcode/dynamic-workflow` ported: TS-script authoring (facade `agent()/ask()/run()/log()/sleep()/escalate()`), compiler validation with a string-literal gate on `run()`, vm-sandboxed execution with an append-only JSONL journal, escalations (parked promises, budget 3/ask), and `DynamicWorkflowService` with submit/amend/resume/stop implementing the seven upstream lifecycle invariants (warm-cache amend/resume, orphan reconciliation). Gateway: `/api/dynamic-workflows/*`.
+- **Protocol Versioning** (`server/protocol_version.ts`) — ZCode Protocol V4 transport patterns: `/api/protocol/hello` handshake with capability echo, `X-Quill-Protocol-Version` negotiation (older = deprecation header, newer = 400 + supported range), plus the three compat utilities (`stripUnknownFields`, `isMethodNotFoundError`, `checkPayloadSchemaVersion`).
+- **Conversation Sharing** (`runtime/sharing.ts`) — ZCode's `ConversationShareService` self-hosted: sanitize (secret redaction, tool-internals stripping) → integrity-hashed public projection → file-backed store; access modes private/link_viewer/link_editor; import as a new thread; read-only viewer at `/share/[id]`. Gateway: `/api/shares/*`.
+- **Automation → IM Delivery** (`scheduling/automation_delivery.ts`) — implements what ZCode's `bot_delivery_target` column promises but never delivers: scheduled-task outcomes pushed to Slack/Feishu/DingTalk/Telegram/generic webhooks, event-filtered, best-effort.
+- **Claude Code Session Migration** (`migrations/claude_code.ts`) — ZCode's claudeNativeSessionImport: scan `~/.claude/projects` JSONL, tolerant parse, import as threads tagged `migrationSource: "claudeCode"`. Gateway: `/api/migrations/claude-code/*`.
+- **@-Mention Pickers** (`frontend/.../mention-picker.tsx`) — ZCode's composer `MentionPlugin` model: caret-aware `@` trigger opens a grouped Agents+Skills autocomplete with keyboard navigation.
+- **LLM Overlay** (`models/llm_overlay.ts`) — CrewAI 1.15.22's `llm_overlay`: AsyncLocalStorage-scoped role→model routing with whitespace-stripped exact match, conflict detection, and the faithful settings-merge rule (generation params copy, credentials only same-provider); wired into `createChatModel(role)`.
+- **Delegation Acceptance Criteria** (`multi_agent/acceptance_checks.ts`) — DeerFlow 2.1.0's deterministic checks: `file: exists/non-empty`, `file_written:`, `tests_passed:` anchored to recorded executions; workspace-scoped paths; verdict block appended to `task` tool results.
+- **Goal Judge** (`agents/goal/judge.ts`) — Hermes `/goal` judge model: four verdicts (done/blocked/wait/continue), fail-open on judge errors (turn budget as backstop), quality gates before the judge, wait-parking with `wakeWaiting`.
+
 ### v0.7.0 (ZCode Sync — Round 4)
 
 - **Off-Peak Tasks** (`scheduling/offpeak.ts`) — Deferred execution with server-admitted tickets, ported from ZCode's "闲时任务" runtime. Ticket state machine (queued/ready/active/settled/expired) with TTL expiry detection and automatic re-ticket; shared `OffPeakScheduler` tick loop gated on an injectable system-idle predicate.

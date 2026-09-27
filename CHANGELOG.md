@@ -5,6 +5,48 @@ All notable changes to Quill are documented in this file.
 The format is based on [KeepaChangelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-09-28
+
+### Added
+
+#### ZCode Sync & Framework Competitiveness Update (Round 5)
+
+Systematic evaluation of 11 frameworks/products (ZCode v3.14.3 full-source — no newer release as of 2026-09-28; OpenWork v0.18.54, DeepSeek Harness dsh-v0.1.7-rc.2, OpenClaw 2026.9.6, Hermes Agent v0.21.5, Kimi Code 2.1.1, OpenAI Codex 0.159-alpha, awesome-harness-engineering, DeerFlow 2.1.0, Agent Framework 1.19, CrewAI 1.15.22). Nine new feature systems ported — six from ZCode's still-unported v3.14.3 feature set, three from the best of the reference frameworks:
+
+- **dynamic-workflows:** TS-script agent orchestration with journal-backed amend/resume, ported from ZCode's flagship `@zcode/dynamic-workflow` (compiler + runtime + journal + service). Users author workflows as plain TypeScript (top-level `await`, facade calls `agent()/ask()/run()/log()/sleep()/escalate()`); the compiler validates (forbidden patterns, string-literal gate on `run()`), lowers onto a `__host` facade, and fingerprints the script (SHA-256). The engine executes in a `node:vm` sandbox with whitelisted globals only, journals every event to an append-only JSONL log, and supports escalations (parked promises answered by the host, budget 3/ask). `DynamicWorkflowService` implements ZCode's seven lifecycle invariants: submit / amend (supersede predecessor + import finished asks as warm cache) / resume (rebuild cache from the run's own journal) / stop / orphan reconciliation. Gateway routes: `/api/dynamic-workflows` (submit/list/get/events/amend/resume/stop/escalations). `workflows/dynamic/`
+- **protocol-versioning:** Versioned handshake + capability negotiation, ported from ZCode's Protocol V4 transport patterns. `GET /api/protocol/hello` returns the server's protocol version + capabilities (echoing client capabilities, `HelloMessage`/`ClientHello` style); every response advertises `X-Quill-Protocol-Version`; requests may pin an older version (served with a `Deprecation` header) but a newer one fails fast with 400 + the supported range. Ships the three upstream compat patterns as utilities: `stripUnknownFields` (optional-compat-fields tolerance), `isMethodNotFoundError` (graceful -32601/404 degradation), `checkPayloadSchemaVersion` (readers reject newer schema versions). `server/protocol_version.ts`
+- **conversation-sharing:** Self-hosted share pipeline, ported from ZCode's `ConversationShareService` (which depends on Z.ai's cloud — Quill self-hosts). Publish: sanitize (system messages dropped, secret-shaped strings redacted, tool internals stripped, length caps) → public projection (schema version + SHA-256 integrity hash) → file-backed store under `.scitops/shares/`. Access modes: `private` / `link_viewer` (view) / `link_editor` (view + import, upstream default). Import creates a new thread from the shared rows. Read-only web viewer at `/share/[id]`. Gateway routes: `/api/shares` (create/list/get/delete/import). `runtime/sharing.ts`
+- **automation-im-delivery:** Scheduled-run outcomes pushed to IM platforms — implementing what ZCode's `bot_delivery_target` column promises but no upstream code delivers. Scheduled tasks declare a `delivery` target (channel kind + webhook URL + optional events filter); when a run settles, the scheduler pushes a compact outcome message (status, thread, summary) formatted per platform: Slack / Feishu / DingTalk incoming webhooks, Telegram `sendMessage`, generic webhook. Best-effort — a broken webhook never breaks the scheduler tick. `scheduling/automation_delivery.ts`
+- **claude-code-migration:** Import Claude Code conversations as Quill threads, ported from ZCode's `claudeNativeSessionImportRepo`/`Parser`. Scans `~/.claude/projects/*/`*.jsonl (newest first, empty files skipped), parses tolerantly (malformed lines skipped and counted, string or content-block message content, unknown event types ignored, un-munges project dir names), and imports via an injected thread creator that stamps `migrationSource: "claudeCode"`. Gateway routes: `/api/migrations/claude-code/scan` + `/import`. `migrations/claude_code.ts`
+- **mention-pickers:** `@`-mention + capability pickers in the chat input, ported from ZCode's `MentionPlugin`/`SlashCommandPlugin` composer model. Typing `@` mid-text opens a grouped autocomplete panel (Agents + Skills) with full keyboard navigation (arrows/enter/tab/escape); selection inserts an atomic `@name` mention at the caret. Trigger detection is caret-aware (`getAtMentionQuery`), composes with the existing leading-`/` skill picker. `frontend/src/components/workspace/mention-picker.tsx`
+- **llm-overlay:** Process-context role→model routing, ported from CrewAI 1.15.22's `llm_overlay` context variable. `withLlmOverlay(mapping, fn)` scopes a role→model overlay (AsyncLocalStorage — follows the async calling context); `overlayModelFor(role, declared)` resolves with whitespace-stripped exact matching; conflicting whitespace-variant keys mapping to different models throw ("give each role one model"). `mergeOverlaySettings` ports `create_llm_like` faithfully: generation settings copy when the overlay model omits them, credentials/endpoints only when providers match. Wired into `createChatModel` via an optional `role` option. `models/llm_overlay.ts`
+- **acceptance-criteria:** Deterministic, code-executed checks on delegated subagent results, ported from DeerFlow 2.1.0's `check_acceptance_criteria` — verdicts the lead agent can trust because the harness (not the subagent) verifies them. Criterion grammar: `file:<path> exists` / `file:<path> non-empty` / `file_written:<path>` (workspace-scoped path resolution, escapes rejected) / `tests_passed:<command>` (anchored to a recorded successful execution with test-summary-shaped output — never re-runs tests). Unknown formats → `unverified`. The `task` tool accepts `acceptance_criteria` and appends the rendered verdict block to the result. `multi_agent/acceptance_checks.ts`
+- **goal-judge:** Four-verdict judge state machine, ported from Hermes Agent's `/goal` standing objectives with judge-model continuation. After each turn the judge returns `done` / `blocked` / `wait` / `continue`: done → satisfied; blocked → paused (user informed); wait → parked in new `waiting` status until woken (`wakeWaiting`); continue → another turn within the turn budget. Fail-open semantics: a broken judge (network, malformed response) defaults to `continue` — the turn budget is the backstop. Quality gates run before the judge; a failed gate's directive drives the next turn without a judge call. Composes with the existing GoalManager via `verdictFromEvaluation`. `agents/goal/judge.ts`
+
+#### New Modules
+
+```
+workflows/dynamic/            — Dynamic workflow scripts (ZCode flagship)
+  compiler.ts                 — validate + lower onto __host facade + scriptHash
+  journal.ts                  — append-only JSONL event log + ImportedRunCache
+  engine.ts                   — vm-sandboxed execution + AskScheduler + escalations
+  service.ts                  — submit/amend/resume/stop lifecycle (7 invariants)
+server/protocol_version.ts    — versioned handshake + capability negotiation
+runtime/sharing.ts            — ConversationShareStore + sanitize + projection + import
+scheduling/automation_delivery.ts — IM delivery of scheduled-run outcomes
+migrations/claude_code.ts     — Claude Code session scan/parse/import
+models/llm_overlay.ts         — role→model overlay (AsyncLocalStorage)
+multi_agent/acceptance_checks.ts — deterministic delegation acceptance checks
+agents/goal/judge.ts          — four-verdict judge engine (done/blocked/wait/continue)
+frontend mention-picker.tsx   — @-mention grouped autocomplete panel
+frontend share/[id]/page.tsx  — read-only shared-conversation viewer
+```
+
+### Testing
+
+- 111 new backend unit tests across the 8 new modules (backend suite: 583 → 694, all passing) + 4 frontend tests (411 total).
+- Dynamic workflow tests exercise real journal files, warm-cache amend/resume, escalation parking/resolution, and stop semantics; sharing tests verify secret redaction and integrity tamper detection; migration tests parse real-format JSONL fixtures.
+
 ## [0.7.0] — 2026-09-27
 
 ### Added

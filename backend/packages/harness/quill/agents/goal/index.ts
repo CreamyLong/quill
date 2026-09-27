@@ -16,3 +16,18 @@ export {
 } from "./types.js";
 
 export { GoalManager, type GoalManagerConfig, type EvaluateContext } from "./manager.js";
+
+export {
+  GoalJudgeEngine,
+  createNonEmptyTurnGate,
+  verdictFromEvaluation,
+  wakeWaiting,
+  type GoalJudgeEngineConfig,
+  type GoalJudgeVerdict,
+  type GoalQualityGate,
+  type JudgeAction,
+  type JudgeDecision,
+  type JudgeOutcome,
+  type JudgeRoundDeps,
+  type QualityGateResult,
+} from "./judge.js";

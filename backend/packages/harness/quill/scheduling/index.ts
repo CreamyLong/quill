@@ -10,3 +10,14 @@ export type { ScheduleSpec, ScheduledRunStatus, ScheduledTask, ScheduledTaskInpu
 export { parseCronExpression, isCronExpression, nextCronRun, type ParsedCron } from "./cron.js";
 export { ScheduledTaskScheduler, computeNextRun, type ScheduledFireResult, type SchedulerOptions, type ScheduledTaskStore } from "./scheduler.js";
 export { FileScheduledTaskStore, MemoryScheduledTaskStore } from "./store.js";
+export {
+  WebhookDeliverySender,
+  buildDeliveryPayload,
+  deliverRunOutcome,
+  formatRunOutcome,
+  shouldDeliver,
+  type AutomationDeliveryTarget,
+  type DeliveryChannel,
+  type DeliveryEventType,
+  type DeliverySender,
+} from "./automation_delivery.js";

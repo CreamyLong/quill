@@ -13,6 +13,7 @@
 import type { ScheduledTask, ScheduledRunStatus, SchedulingFeatures } from "./types.js";
 import { DEFAULT_SCHEDULING_FEATURES } from "./types.js";
 import { nextCronRun } from "./cron.js";
+import { deliverRunOutcome, type DeliverySender } from "./automation_delivery.js";
 
 /** Minimal contract the scheduler needs from a task store. */
 export interface ScheduledTaskStore {
@@ -29,6 +30,8 @@ export interface ScheduledFireResult {
   threadId?: string;
   /** Run id of the fired run (absent when skipped). */
   runId?: string;
+  /** Short outcome summary, included in IM delivery messages. */
+  summary?: string;
 }
 
 export interface SchedulerOptions {
@@ -46,6 +49,12 @@ export interface SchedulerOptions {
   logger?: (message: string) => void;
   /** Enhanced scheduling features (jitter, coalescing, stale cleanup). */
   features?: Partial<SchedulingFeatures>;
+  /**
+   * IM delivery sender for run outcomes (ZCode `bot_delivery_target`, but
+   * actually implemented). When provided, tasks declaring a `delivery`
+   * target push their outcome to the channel after settling.
+   */
+  deliverySender?: DeliverySender;
 }
 
 /**
@@ -74,6 +83,7 @@ export class ScheduledTaskScheduler {
   private readonly now: () => Date;
   private readonly logger: (message: string) => void;
   private readonly features: SchedulingFeatures;
+  private readonly deliverySender?: DeliverySender;
   private timer: NodeJS.Timeout | null = null;
   /** Task ids that have a run currently in flight. */
   private inFlight: Set<string> = new Set();
@@ -85,6 +95,7 @@ export class ScheduledTaskScheduler {
     this.now = options.now ?? (() => new Date());
     this.logger = options.logger ?? (() => {});
     this.features = { ...DEFAULT_SCHEDULING_FEATURES, ...options.features };
+    this.deliverySender = options.deliverySender;
   }
 
   /** Start the periodic tick. The timer is unref'd so it never keeps the
@@ -181,6 +192,12 @@ export class ScheduledTaskScheduler {
       }
 
       this.store.save(updated);
+
+      // IM delivery (ZCode bot_delivery_target, actually implemented):
+      // best-effort push of the settled outcome to the declared channel.
+      if (this.deliverySender !== undefined) {
+        await deliverRunOutcome(updated, result, updated.delivery, this.deliverySender, this.logger);
+      }
     }
   }
 

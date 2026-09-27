@@ -20,8 +20,8 @@ export type GoalBlocker =
   | "external_wait"
   | "goal_not_met_yet";
 
-/** Status of a goal. */
-export type GoalStatus = "active" | "satisfied" | "abandoned" | "paused";
+/** Status of a goal. `waiting` = parked on async work (Hermes `wait` verdict). */
+export type GoalStatus = "active" | "satisfied" | "abandoned" | "paused" | "waiting";
 
 /** Result of a goal evaluation. */
 export interface GoalEvaluation {

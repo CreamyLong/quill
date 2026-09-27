@@ -15,6 +15,10 @@ export type ScheduleSpec =
   | { kind: "interval"; everySeconds: number }
   | { kind: "cron"; expression: string };
 
+import type { AutomationDeliveryTarget } from "./automation_delivery.js";
+
+export type { AutomationDeliveryTarget, DeliveryChannel, DeliveryEventType } from "./automation_delivery.js";
+
 /** Outcome of a single scheduled run attempt. */
 export type ScheduledRunStatus = "success" | "error" | "cancelled" | "skipped";
 
@@ -46,6 +50,11 @@ export interface ScheduledTask {
   next_run_at: string | null;
   /** Number of fired runs so far (skips are not counted). */
   run_count: number;
+  /**
+   * IM delivery target for run outcomes (ZCode `bot_delivery_target`, but
+   * actually implemented — see `automation_delivery.ts`).
+   */
+  delivery?: AutomationDeliveryTarget;
 }
 
 /** Wire input for creating/updating a scheduled task. */
@@ -63,6 +72,12 @@ export interface ScheduledTaskInput {
   stale_threshold_days?: number;
   /** Optional model override for this task's runs. */
   model?: string | null;
+  /**
+   * IM delivery target for run outcomes (ZCode `bot_delivery_target`, but
+   * actually implemented). When set, settled runs push a compact outcome
+   * message to the channel, filtered by `events`.
+   */
+  delivery?: AutomationDeliveryTarget;
 }
 
 /** Enhanced scheduling features (from Kimi Code + DeerFlow 2.0). */

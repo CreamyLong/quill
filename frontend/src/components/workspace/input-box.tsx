@@ -65,6 +65,7 @@ import { isHiddenFromUIMessage } from "@/core/messages/utils";
 import { useModels } from "@/core/models/hooks";
 import type { Skill } from "@/core/skills";
 import { useSkills } from "@/core/skills/hooks";
+import { useAgents } from "@/core/agents/hooks";
 import { useSuggestionsConfig } from "@/core/suggestions/hooks";
 import type { AgentThreadContext } from "@/core/threads";
 import { textOfMessage } from "@/core/threads/utils";
@@ -89,6 +90,11 @@ import {
 } from "../ui/dropdown-menu";
 
 import { useThread } from "./messages/context";
+import {
+  MentionPicker,
+  getAtMentionQuery,
+  type MentionItem,
+} from "./mention-picker";
 import { ModeHoverGuide } from "./mode-hover-guide";
 import { Tooltip } from "./tooltip";
 
@@ -225,6 +231,7 @@ export function InputBox({
   const { thread, isMock } = useThread();
   const { textInput } = usePromptInputController();
   const { skills } = useSkills();
+  const { agents } = useAgents();
   const promptRootRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const promptHistoryIndexRef = useRef<number | null>(null);
@@ -240,6 +247,12 @@ export function InputBox({
   const [skillSuggestionIndex, setSkillSuggestionIndex] = useState(0);
   const [dismissedSkillSuggestionValue, setDismissedSkillSuggestionValue] =
     useState<string | null>(null);
+  // @-mention picker state (ZCode composer sync).
+  const [caretIndex, setCaretIndex] = useState(0);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [dismissedMentionValue, setDismissedMentionValue] = useState<
+    string | null
+  >(null);
   const lastGeneratedForAiIdRef = useRef<string | null>(null);
   const wasStreamingRef = useRef(false);
   const messagesRef = useRef(thread.messages);
@@ -516,6 +529,113 @@ export function InputBox({
     setSkillSuggestionIndex(0);
   }, [slashSkillQuery, skillSuggestions.length]);
 
+  // ── @-mention picker (ZCode composer sync) ─────────────────────────────
+  const mentionQuery = useMemo(
+    () => getAtMentionQuery(textInput.value ?? "", caretIndex),
+    [textInput.value, caretIndex],
+  );
+  const mentionItems = useMemo<MentionItem[]>(() => {
+    if (mentionQuery === null) {
+      return [];
+    }
+    const query = mentionQuery.toLowerCase();
+    const agentItems: MentionItem[] = agents
+      .filter((agent) => agent.name.toLowerCase().includes(query))
+      .map((agent) => ({
+        name: agent.name,
+        description: agent.description,
+        kind: "agent" as const,
+      }));
+    const skillItems: MentionItem[] = skills
+      .filter((skill) => skill.name.toLowerCase().includes(query))
+      .map((skill) => ({
+        name: skill.name,
+        description: skill.description,
+        kind: "skill" as const,
+      }));
+    return [...agentItems, ...skillItems];
+  }, [agents, skills, mentionQuery]);
+  const showMentionPicker =
+    !disabled &&
+    textareaFocused &&
+    slashSkillQuery === null &&
+    mentionQuery !== null &&
+    mentionItems.length > 0 &&
+    dismissedMentionValue !== textInput.value;
+
+  useEffect(() => {
+    setMentionIndex(0);
+  }, [mentionQuery, mentionItems.length]);
+
+  const applyMention = useCallback(
+    (item: MentionItem) => {
+      const value = textInput.value ?? "";
+      // Replace the @fragment ending at the caret with the selected mention.
+      const before = value.slice(0, caretIndex);
+      const after = value.slice(caretIndex);
+      const fragmentStart = before.lastIndexOf("@");
+      if (fragmentStart === -1) {
+        return;
+      }
+      const nextValue = `${before.slice(0, fragmentStart)}@${item.name} ${after}`;
+      textInput.setInput(nextValue);
+      setDismissedMentionValue(nextValue);
+      requestAnimationFrame(() => {
+        const textarea = textareaRef.current;
+        if (!textarea) {
+          return;
+        }
+        const nextCaret = fragmentStart + item.name.length + 2;
+        textarea.focus();
+        textarea.setSelectionRange(nextCaret, nextCaret);
+        setCaretIndex(nextCaret);
+      });
+    },
+    [caretIndex, textInput],
+  );
+
+  const handleMentionKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (!showMentionPicker) {
+        return;
+      }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setMentionIndex((index) => (index + 1) % mentionItems.length);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setMentionIndex(
+          (index) => (index - 1 + mentionItems.length) % mentionItems.length,
+        );
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        if (event.shiftKey) {
+          return;
+        }
+        event.preventDefault();
+        const selected = mentionItems[mentionIndex];
+        if (selected) {
+          applyMention(selected);
+        }
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDismissedMentionValue(textInput.value);
+      }
+    },
+    [
+      applyMention,
+      mentionIndex,
+      mentionItems,
+      showMentionPicker,
+      textInput.value,
+    ],
+  );
+
   const applySkillSuggestion = useCallback(
     (skill: Skill) => {
       const nextValue = `/${skill.name} `;
@@ -653,18 +773,29 @@ export function InputBox({
 
   const handlePromptTextareaKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
+      handleMentionKeyDown(event);
+      if (event.defaultPrevented) {
+        return;
+      }
       handleSkillSuggestionKeyDown(event);
       if (event.defaultPrevented) {
         return;
       }
       handlePromptHistoryKeyDown(event);
     },
-    [handlePromptHistoryKeyDown, handleSkillSuggestionKeyDown],
+    [handleMentionKeyDown, handleSkillSuggestionKeyDown, handlePromptHistoryKeyDown],
   );
 
   const handlePromptTextareaChange = useCallback(() => {
     promptHistoryIndexRef.current = null;
     promptHistoryDraftRef.current = "";
+    const textarea = textareaRef.current;
+    setCaretIndex(textarea?.selectionStart ?? 0);
+  }, []);
+
+  const handlePromptTextareaSelect = useCallback(() => {
+    const textarea = textareaRef.current;
+    setCaretIndex(textarea?.selectionStart ?? 0);
   }, []);
 
   const showFollowups =
@@ -816,6 +947,18 @@ export function InputBox({
           </div>
         </div>
       )}
+      {showMentionPicker && (
+        <div className="absolute right-0 bottom-full left-0 z-40 mb-2 px-1">
+          <MentionPicker
+            items={mentionItems}
+            selectedIndex={mentionIndex}
+            onSelect={applyMention}
+            onHover={setMentionIndex}
+            trigger="@"
+            ariaLabel="Mention suggestions"
+          />
+        </div>
+      )}
       {showSkillSuggestions && (
         <div className="absolute right-0 bottom-full left-0 z-40 mb-2 px-1">
           <div
@@ -890,6 +1033,7 @@ export function InputBox({
             onChange={handlePromptTextareaChange}
             onFocus={() => setTextareaFocused(true)}
             onKeyDown={handlePromptTextareaKeyDown}
+            onSelect={handlePromptTextareaSelect}
             ref={textareaRef}
           />
         </PromptInputBody>

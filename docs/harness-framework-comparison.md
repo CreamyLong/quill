@@ -1,6 +1,6 @@
 # Harness Framework Comparison & Suitability Analysis
 
-> **Last updated:** 2026-09-27 (v0.7.0)
+> **Last updated:** 2026-09-28 (v0.8.0)
 > **Scope:** Systematic evaluation of 11 leading AI agent harness/framework/workspace projects
 > **Goal:** Identify features to port into Quill for competitive parity and differentiation
 
@@ -8,7 +8,23 @@
 
 ## Executive Summary
 
-Quill is one of the most feature-rich open-source AI agent harnesses, with a mature LangGraph-based architecture, 40+ middleware chain, sandboxed execution, persistent memory with consolidation, MCP integration, sub-agent delegation, Tauri desktop app, multi-platform IM channels, a full workflow engine, and self-improving skills. This analysis identifies **29 high-impact features** ported in v0.4.0, v0.5.0, v0.6.0, and v0.7.0 from leading frameworks.
+Quill is one of the most feature-rich open-source AI agent harnesses, with a mature LangGraph-based architecture, 40+ middleware chain, sandboxed execution, persistent memory with consolidation, MCP integration, sub-agent delegation, Tauri desktop app, multi-platform IM channels, a full workflow engine, and self-improving skills. This analysis identifies **38 high-impact features** ported in v0.4.0–v0.8.0 from leading frameworks.
+
+### 2026-09-28 Update (v0.8.0 — ZCode Sync Round 5)
+
+ZCode has had no release since v3.14.3 (2026-09-24), so this round ported the remaining high-value **unported features of ZCode's open-sourced workbench** (verified via DeepWiki full-source research: 21 targeted queries), plus the best unported patterns from the reference frameworks. Nine new feature systems:
+
+1. **Dynamic Workflows** (`workflows/dynamic/`) — ZCode's flagship: TS-script orchestration with compiler validation (string-literal gate on `run()`), vm-sandboxed execution, append-only journal, escalations, and amend/resume with warm-cache import (the seven upstream lifecycle invariants)
+2. **Protocol Versioning** (`server/protocol_version.ts`) — ZCode Protocol V4 patterns: versioned handshake + capability negotiation, deprecation headers, and the three compat patterns (compat-field tolerance, method-not-found degradation, payload schema versioning)
+3. **Conversation Sharing** (`runtime/sharing.ts`) — ZCode's ConversationShareService self-hosted: sanitization (secret redaction), integrity-hashed projections, three access modes, import, and a read-only web viewer
+4. **Automation → IM Delivery** (`scheduling/automation_delivery.ts`) — what ZCode's `bot_delivery_target` column promises but never delivers: scheduled-run outcomes pushed to Slack/Feishu/DingTalk/Telegram webhooks
+5. **Claude Code Session Migration** (`migrations/claude_code.ts`) — ZCode's claudeNativeSessionImport: tolerant JSONL parsing of `~/.claude/projects`, origin-tagged import
+6. **@-Mention Pickers** (`frontend/.../mention-picker.tsx`) — ZCode's composer MentionPlugin: caret-aware grouped autocomplete (Agents + Skills) with keyboard navigation
+7. **LLM Overlay** (`models/llm_overlay.ts`) — CrewAI 1.15.22's role→model routing with the faithful settings-merge semantics
+8. **Delegation Acceptance Criteria** (`multi_agent/acceptance_checks.ts`) — DeerFlow 2.1.0's deterministic, harness-verified subagent result checks
+9. **Goal Judge** (`agents/goal/judge.ts`) — Hermes's four-verdict judge state machine (done/blocked/wait/continue) with fail-open semantics and pre-judge quality gates
+
+**ZCode features still unported (v0.9.0 candidates):** Remote Workspaces (SSH/WSL — the most desktop-coupled feature; reframe as SSH-executed sandboxes), whiteboard (low value), coding-plan subscription layer (business feature). From other frameworks: OpenClaw Decision Models, DeepSeek Harness event-sourced continuation + live tool activation, Kimi Tower mode, agent-framework call-ID-bound approvals + SecretString, Codex Guardian circuit breakers, SoL-Pi Action Fusion / Evidence-Preserving Reducer / Online Context Compact, Connections/Agent Vault credential brokering.
 
 ### 2026-09-27 Update (v0.7.0 — ZCode Sync Round 4)
 
@@ -110,8 +126,17 @@ Seven new feature systems ported from 10 frameworks:
 | **Durable kanban board** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | **Observation handles** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Skill attribution** | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Dynamic workflow scripts** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Protocol versioning / negotiation** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Conversation sharing (self-hosted)** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅* |
+| **Automation → IM delivery** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌* |
+| **Claude Code session migration** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **@-mention / capability pickers** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Role→model overlay routing** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Delegation acceptance criteria** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Goal judge verdicts (4-state)** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
 
-> ✅ = Full implementation | ❌ = Not present | ✅* = Is the MCP server. Columns: Quill | DeerFlow | OpenWork | DeepSeek | Kimi | Codex | CrewAI | AutoGen | OpenClaw | Hermes | ZCode
+> ✅ = Full implementation | ❌ = Not present | ✅* = Requires Z.ai cloud (Quill self-hosts) | ❌* = `bot_delivery_target` column exists but no code delivers. Columns: Quill | DeerFlow | OpenWork | DeepSeek | Kimi | Codex | CrewAI | AutoGen | OpenClaw | Hermes | ZCode
 
 ---
 

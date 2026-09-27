@@ -275,8 +275,8 @@ export interface ThreadState {
 export interface GoalState {
   /** The objective text. */
   objective: string;
-  /** Current status of the goal. */
-  status: "active" | "satisfied" | "abandoned" | "paused";
+  /** Current status of the goal (`waiting` = parked on async work, Hermes judge). */
+  status: "active" | "satisfied" | "abandoned" | "paused" | "waiting";
   /** Creation timestamp. */
   created_at: string;
   /** Last update timestamp. */

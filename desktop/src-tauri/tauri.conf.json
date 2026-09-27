@@ -1,6 +1,6 @@
 {
   "productName": "Quill Desktop",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "identifier": "com.quill.desktop",
   "build": {
     "beforeBuildCommand": "node scripts/prepare-bundle.mjs",

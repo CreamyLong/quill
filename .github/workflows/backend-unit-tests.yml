@@ -34,6 +34,10 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Run backend type check + tests
+      - name: Run backend type check + unit tests
         working-directory: backend
-        run: npm run check && npm run gateway:test
+        run: npm run check && npm test
+
+      - name: Build + gateway end-to-end test
+        working-directory: backend
+        run: npm run build && npm run gateway:test
