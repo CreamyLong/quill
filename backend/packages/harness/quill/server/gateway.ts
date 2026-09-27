@@ -1843,20 +1843,31 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
         return;
       }
       // Prefer the event-store view (survives summarization compaction).
+      // LangChain message types map onto share roles: human → user, ai →
+      // assistant; everything else is dropped by sanitization.
+      const shareRole = (m: BaseMessage): string =>
+        m._getType() === "human" ? "user" : m._getType() === "ai" ? "assistant" : m._getType();
       let rawMessages: RawShareMessage[] = [];
       try {
         const records = await eventStore.listMessages(threadId, { limit: 5000 });
-        rawMessages = records.map((r) => {
-          const m = r.content as BaseMessage;
-          return {
-            role: m._getType(),
-            content: m.content,
-            timestamp: (m.additional_kwargs as { timestamp?: string } | undefined)?.timestamp,
-          };
-        });
+        if (records.length > 0) {
+          rawMessages = records.map((r) => {
+            const m = r.content as BaseMessage;
+            return {
+              role: shareRole(m),
+              content: m.content,
+              timestamp: (m.additional_kwargs as { timestamp?: string } | undefined)?.timestamp,
+            };
+          });
+        }
       } catch {
+        // fall through to the thread-state view
+      }
+      if (rawMessages.length === 0) {
+        // Imported threads (share imports, Claude Code migration) carry their
+        // history in thread state only — the event store has no records.
         rawMessages = ((t.values.messages as BaseMessage[] | undefined) ?? []).map((m) => ({
-          role: m._getType(),
+          role: shareRole(m),
           content: m.content,
         }));
       }

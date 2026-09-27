@@ -22,9 +22,9 @@
  */
 
 import crypto from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
 
+import { projectRoot } from "../../config/runtime_paths.js";
 import { compileWorkflowScript, WorkflowCompileError } from "./compiler.js";
 import {
   WorkflowJournal,
@@ -74,8 +74,10 @@ export class DynamicWorkflowService {
   private readonly live = new Map<string, LiveRun>();
 
   constructor(options: DynamicWorkflowServiceOptions) {
+    // Resolve against the project root, never cwd — GUI apps (Tauri) launch
+    // with cwd = "/" and `/.scitops` is unwritable.
     this.journalDir =
-      options.journalDir ?? path.join(process.cwd(), ".scitops", "dynamic-workflows");
+      options.journalDir ?? path.join(projectRoot(), ".scitops", "dynamic-workflows");
     this.driver = options.driver;
     this.maxConcurrency = options.maxConcurrency ?? 4;
     this.reconcileOrphanedRuns();
