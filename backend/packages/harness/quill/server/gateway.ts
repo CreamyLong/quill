@@ -2396,6 +2396,166 @@ export function createGatewayServer(deps: GatewayDeps): GatewayServerHandle {
       return;
     }
 
+    // --- Experiments (algorithm A/B testing + research platform) ---
+    if (p === "/experiments" && method === "GET") {
+      const { getExperimentSuite } = await import("../experiments/config.js");
+      sendJson(req, res, 200, getExperimentSuite());
+      return;
+    }
+    if (p === "/experiments" && method === "POST") {
+      const body = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+      const { upsertExperiment, validateExperiment } = await import("../experiments/config.js");
+      const errors = validateExperiment(body as never);
+      if (errors.length > 0) {
+        sendJson(req, res, 400, { detail: "Validation failed", errors });
+        return;
+      }
+      const suite = upsertExperiment(body as never);
+      sendJson(req, res, 201, suite);
+      return;
+    }
+    if (p === "/experiments/modules" && method === "GET") {
+      const { listModuleKeys, getRegistration } = await import("../experiments/registry.js");
+      const keys = listModuleKeys();
+      const modules = keys.map((key) => {
+        const reg = getRegistration(key);
+        return {
+          key,
+          variants: reg?.variants ?? [],
+          activeVariant: reg?.activeVariant ?? null,
+        };
+      });
+      sendJson(req, res, 200, { modules });
+      return;
+    }
+
+    const expItem = p.match(/^\/experiments\/([^/]+)$/);
+    if (expItem) {
+      const expId = decodeURIComponent(expItem[1]);
+      if (method === "GET") {
+        const { getExperiment } = await import("../experiments/config.js");
+        const experiment = getExperiment(expId);
+        if (!experiment) {
+          sendJson(req, res, 404, { detail: "Experiment not found" });
+          return;
+        }
+        sendJson(req, res, 200, experiment);
+        return;
+      }
+      if (method === "PUT") {
+        const body = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+        body.id = expId;
+        const { upsertExperiment, validateExperiment } = await import("../experiments/config.js");
+        const errors = validateExperiment(body as unknown as Parameters<typeof validateExperiment>[0]);
+        if (errors.length > 0) {
+          sendJson(req, res, 400, { detail: "Validation failed", errors });
+          return;
+        }
+        const suite = upsertExperiment(body as unknown as Parameters<typeof upsertExperiment>[0]);
+        sendJson(req, res, 200, suite);
+        return;
+      }
+      if (method === "DELETE") {
+        const { removeExperiment } = await import("../experiments/config.js");
+        const suite = removeExperiment(expId);
+        sendJson(req, res, 200, suite);
+        return;
+      }
+    }
+
+    const expAction = p.match(/^\/experiments\/([^/]+)\/(enable|disable|report|report\/text|metrics|reset)$/);
+    if (expAction) {
+      const expId = decodeURIComponent(expAction[1]);
+      const action = expAction[2];
+      const { getExperiment, upsertExperiment } = await import("../experiments/config.js");
+      const experiment = getExperiment(expId);
+      if (!experiment) {
+        sendJson(req, res, 404, { detail: "Experiment not found" });
+        return;
+      }
+      if (action === "enable" || action === "disable") {
+        experiment.enabled = action === "enable";
+        upsertExperiment(experiment);
+        sendJson(req, res, 200, experiment);
+        return;
+      }
+      if (action === "report") {
+        const { generateReport } = await import("../experiments/evaluation.js");
+        sendJson(req, res, 200, generateReport(experiment));
+        return;
+      }
+      if (action === "report/text") {
+        const { generateReport, formatReport } = await import("../experiments/evaluation.js");
+        const report = generateReport(experiment);
+        res.writeHead(200, { "Content-Type": "text/plain", ...corsHeaders(req) });
+        res.end(formatReport(report));
+        return;
+      }
+      if (action === "metrics") {
+        const { getVariantComparison } = await import("../experiments/runtime.js");
+        sendJson(req, res, 200, { moduleKey: experiment.moduleKey, variants: getVariantComparison(experiment.moduleKey) });
+        return;
+      }
+      if (action === "reset") {
+        const { resetMetrics } = await import("../experiments/registry.js");
+        for (const v of experiment.variants) {
+          resetMetrics(experiment.moduleKey, v.variant);
+        }
+        sendJson(req, res, 200, { message: "Metrics reset", moduleKey: experiment.moduleKey });
+        return;
+      }
+    }
+
+    const expModuleAction = p.match(/^\/experiments\/modules\/([^/]+)\/(variants|switch)$/);
+    if (expModuleAction) {
+      const moduleKey = decodeURIComponent(expModuleAction[1]) as never;
+      const action = expModuleAction[2];
+      const { listVariants, getRegistration, switchVariant } = await import("../experiments/registry.js");
+      if (action === "variants") {
+        sendJson(req, res, 200, {
+          key: moduleKey,
+          variants: listVariants(moduleKey),
+          activeVariant: getRegistration(moduleKey)?.activeVariant ?? null,
+        });
+        return;
+      }
+      if (action === "switch") {
+        const body = (await readJson(req).catch(() => ({}))) as { variant?: string };
+        if (!body.variant) {
+          sendJson(req, res, 400, { detail: "variant is required" });
+          return;
+        }
+        const success = switchVariant(moduleKey, body.variant);
+        if (!success) {
+          sendJson(req, res, 404, { detail: `Variant "${body.variant}" not found for module "${moduleKey}"` });
+          return;
+        }
+        const reg = getRegistration(moduleKey);
+        sendJson(req, res, 200, { key: moduleKey, activeVariant: reg?.activeVariant });
+        return;
+      }
+    }
+
+    // --- Evaluation (benchmark runner) ---
+    if (p === "/evaluation/run" && method === "POST") {
+      const body = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+      const { runBenchmark } = await import("../evaluation/runner.js");
+      const { createQuillRunner } = await import("../evaluation/adapters/quill_runner.js");
+      const suite = body.suite as Parameters<typeof runBenchmark>[0]["suite"];
+      if (!suite || !Array.isArray(suite.tasks)) {
+        sendJson(req, res, 400, { detail: "suite with tasks array is required" });
+        return;
+      }
+      const runner = createQuillRunner({ client: body.client as never });
+      const report = await runBenchmark({ runner, suite, runnerName: (body.runnerName as string) ?? "quill" });
+      sendJson(req, res, 200, report);
+      return;
+    }
+    if (p === "/evaluation/suites" && method === "GET") {
+      sendJson(req, res, 200, { suites: [] });
+      return;
+    }
+
     sendJson(req, res, 404, { detail: "Not found" });
   }
 

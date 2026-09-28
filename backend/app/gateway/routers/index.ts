@@ -10,3 +10,4 @@ export * from "./channels.types.js";
 export * from "./channel_connections.types.js";
 export * from "./mcp.types.js";
 export * from "./desktop-sync.types.js";
+export * from "./experiments.js";

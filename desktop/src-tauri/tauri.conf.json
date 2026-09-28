@@ -42,7 +42,13 @@
       "icons/icon.ico"
     ],
     "externalBin": [],
-    "resources": ["bundles/**/*"],
+    "resources": [
+      "bundles/backend-bundle/**/*",
+      "bundles/frontend-bundle/.quill-dist/**/*",
+      "bundles/frontend-bundle/server.js",
+      "bundles/frontend-bundle/package.json",
+      "bundles/config.example.yaml"
+    ],
     "copyright": "© 2026 Quill Contributors",
     "publisher": "Quill"
   },
