@@ -8,3 +8,6 @@ export * from "./registry.js";
 export * from "./config.js";
 export * from "./runtime.js";
 export * from "./evaluation.js";
+export * from "./benchmark.js";
+export * from "./paper_export.js";
+export * from "./reproducibility.js";
